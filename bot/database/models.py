@@ -1,5 +1,5 @@
 from bot.dataclasses import dataclass
-from bot.datetime import datetime
+from datetime import datetime
 from bot.typing import Optional
 
 @dataclass
