@@ -1,11 +1,11 @@
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from database import db
-from keyboards.inline import get_language_keyboard
-from keyboards.reply import get_main_keyboard
-from utils.translations import get_text, get_language_name
-from config import SUPPORTED_LANGUAGES
+from bot.aiogram import Router, F
+from bot.aiogram.types import Message, CallbackQuery
+from bot.aiogram.fsm.context import FSMContext
+from bot.database import db
+from bot.keyboards.inline import get_language_keyboard
+from bot.keyboards.reply import get_main_keyboard
+from bot.utils.translations import get_text, get_language_name
+from bot.config import SUPPORTED_LANGUAGES
 
 router = Router()
 
