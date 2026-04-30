@@ -1,4 +1,4 @@
-from bot.start import register_start_handlers
+from start import register_start_handlers
 from bot.admin import register_admin_handlers
 from bot.free_orders import register_free_orders_handlers
 from bot.paid_orders import register_paid_orders_handlers
