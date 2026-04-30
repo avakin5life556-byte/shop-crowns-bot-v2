@@ -3,7 +3,7 @@ import logging
 import sys
 import signal
 
-from bot.loader import bot, dp
+from loader import bot, dp
 from bot.database.db import db
 from bot.handlers import (
     register_start_handlers,
