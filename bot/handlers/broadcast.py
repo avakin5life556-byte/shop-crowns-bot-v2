@@ -1,16 +1,16 @@
-from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery, FSInputFile
-from aiogram.fsm.context import FSMContext
-from datetime import datetime
+from bot.aiogram import Router, F, types
+from bot.aiogram.types import Message, CallbackQuery, FSInputFile
+from bot.aiogram.fsm.context import FSMContext
+from bot.datetime import datetime
 import pytz
 import os
 import tempfile
-from database import db
-from keyboards.inline import get_broadcast_confirmation_keyboard, get_back_keyboard
-from keyboards.reply import get_admin_keyboard
-from utils.translations import get_text
-from config import ADMIN_ID, TIMEZONE
-from states.broadcast_states import BroadcastStates
+from bot.database import db
+from bot.keyboards.inline import get_broadcast_confirmation_keyboard, get_back_keyboard
+from bot.keyboards.reply import get_admin_keyboard
+from bot.utils.translations import get_text
+from bot.config import ADMIN_ID, TIMEZONE
+from bot.states.broadcast_states import BroadcastStates
 import asyncio
 
 router = Router()
