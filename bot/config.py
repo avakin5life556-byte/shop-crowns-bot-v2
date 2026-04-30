@@ -1,5 +1,5 @@
 import os
-from dotenv import load_dotenv
+from bot.dotenv import load_dotenv
 import pytz
 
 load_dotenv()
