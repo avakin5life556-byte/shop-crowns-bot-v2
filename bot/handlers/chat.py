@@ -1,13 +1,13 @@
-from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from datetime import datetime, timedelta
+from bot.aiogram import Router, F, types
+from bot.aiogram.types import Message, CallbackQuery
+from bot.aiogram.fsm.context import FSMContext
+from bot.datetime import datetime, timedelta
 import asyncio
 import pytz
-from database import db
-from keyboards.inline import get_live_chat_keyboard, get_end_chat_keyboard, get_admin_chat_keyboard
-from states.chat_states import ChatStates
-from config import ADMIN_ID, TIMEZONE, CHAT_TIMEOUT_MINUTES
+from bot.database import db
+from bot.keyboards.inline import get_live_chat_keyboard, get_end_chat_keyboard, get_admin_chat_keyboard
+from bot.states.chat_states import ChatStates
+from bot.config import ADMIN_ID, TIMEZONE, CHAT_TIMEOUT_MINUTES
 
 router = Router()
 
