@@ -1,6 +1,6 @@
-from bot.aiogram import Router, F
-from bot.aiogram.types import Message, CallbackQuery
-from bot.aiogram.fsm.context import FSMContext
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
 from bot.database import db
 from bot.keyboards.reply import get_main_keyboard
 
