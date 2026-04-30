@@ -1,4 +1,4 @@
-from bot.typing import Callable, Dict, Any, Awaitable
+from typing import Callable, Dict, Any, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message
 from bot.database import db
