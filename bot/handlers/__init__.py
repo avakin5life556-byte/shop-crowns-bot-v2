@@ -1,16 +1,16 @@
-from .start import register_start_handlers
-from .admin import register_admin_handlers
-from .free_orders import register_free_orders_handlers
-from .paid_orders import register_paid_orders_handlers
-from .mods import register_mods_handlers
-from .support import register_support_handlers
-from .complaints import register_complaints_handlers
-from .chat import register_chat_handlers
-from .rating import register_rating_handlers
-from .language import register_language_handlers
-from .broadcast import register_broadcast_handlers
-from .admin_ban import register_ban_handlers
-from .settings import register_settings_handlers
+from bot.start import register_start_handlers
+from bot.admin import register_admin_handlers
+from bot.free_orders import register_free_orders_handlers
+from bot.paid_orders import register_paid_orders_handlers
+from bot.mods import register_mods_handlers
+from bot.support import register_support_handlers
+from bot.complaints import register_complaints_handlers
+from bot.chat import register_chat_handlers
+from bot.rating import register_rating_handlers
+from bot.language import register_language_handlers
+from bot.broadcast import register_broadcast_handlers
+from bot.admin_ban import register_ban_handlers
+from bot.settings import register_settings_handlers
 
 __all__ = [
     'register_start_handlers',
