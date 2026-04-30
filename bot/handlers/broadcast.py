@@ -1,7 +1,7 @@
 from aiogram import Router, F, types
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
-from bot.datetime import datetime
+from datetime import datetime
 import pytz
 import os
 import tempfile
