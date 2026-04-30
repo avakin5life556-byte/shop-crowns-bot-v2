@@ -1,7 +1,7 @@
 from aiogram import Router, F, types
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from bot.datetime import datetime, timedelta
+from datetime import datetime, timedelta
 import asyncio
 import pytz
 from bot.database import db
