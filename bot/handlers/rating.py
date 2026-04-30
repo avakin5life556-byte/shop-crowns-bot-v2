@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from bot.datetime import datetime
+from datetime import datetime
 import pytz
 from bot.database import db
 from bot.keyboards.inline import get_rating_keyboard, get_back_keyboard
