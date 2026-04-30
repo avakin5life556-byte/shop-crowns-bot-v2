@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from bot.aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 # ========= Yes / No =========
