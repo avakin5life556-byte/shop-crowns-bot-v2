@@ -1,4 +1,4 @@
-from bot.aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from bot.utils.translations import get_user_language, get_text, TRANSLATIONS
 
 
