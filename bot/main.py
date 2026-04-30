@@ -2,9 +2,11 @@ import asyncio
 import logging
 import sys
 import signal
-from bot.loader import bot, dp
-from bot.database import db
-from bot.handlers import (
+
+# Import from local modules (relative to project root)
+from loader import bot, dp
+from database import db
+from handlers import (
     register_start_handlers,
     register_admin_handlers,
     register_free_orders_handlers,
@@ -19,11 +21,12 @@ from bot.handlers import (
     register_ban_handlers,
     register_settings_handlers
 )
-from bot.utils.middleware import RateLimitMiddleware, AntiFloodMiddleware
-from bot.utils.session_manager import session_manager
-from bot.handlers.chat import check_timeouts_periodically
-from bot.config import ADMIN_ID, LOG_LEVEL, LOG_FORMAT
+from utils.middleware import RateLimitMiddleware, AntiFloodMiddleware
+from utils.session_manager import session_manager
+from handlers.chat import check_timeouts_periodically
+from config import ADMIN_ID, LOG_LEVEL, LOG_FORMAT
 
+# Configure logging
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
     format=LOG_FORMAT,
