@@ -1,7 +1,7 @@
-from bot.aiogram import Router, F
-from bot.aiogram.types import Message, CallbackQuery
-from bot.aiogram.fsm.context import FSMContext
-from bot.database import db
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from database import db
 from bot.keyboards.inline import get_yes_no_keyboard, get_contact_button, get_order_admin_keyboard
 from bot.keyboards.reply import get_main_keyboard
 from bot.states.order_states import ChangeNameStates, ChangePhotoStates
