@@ -4,9 +4,9 @@ import sys
 import signal
 
 # Import from local modules (relative to project root)
-from loader import bot, dp
+from bot.loader import  dp
 from bot.database import db
-from handlers import (
+from bot.handlers import (
     register_start_handlers,
     register_admin_handlers,
     register_free_orders_handlers,
