@@ -1,22 +1,22 @@
-from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from datetime import datetime
+from bot.aiogram import Router, F, types
+from bot.aiogram.types import Message, CallbackQuery
+from bot.aiogram.fsm.context import FSMContext
+from bot.datetime import datetime
 import json
 import pytz
-from database import db
-from keyboards.inline import (
+from bot.database import db
+from bot.keyboards.inline import (
     get_yes_no_keyboard, 
     get_continue_keyboard, 
     get_free_orders_keyboard, 
     get_more_options_keyboard,
     get_back_keyboard
 )
-from keyboards.reply import get_main_keyboard
-from states.order_states import ChangeNameStates, ChangePhotoStates
-from config import ADMIN_ID, TIMEZONE
-from utils.helpers import validate_email, sanitize_input, is_rate_limited
-from utils.translations import get_text
+from bot.keyboards.reply import get_main_keyboard
+from bot.states.order_states import ChangeNameStates, ChangePhotoStates
+from bot.config import ADMIN_ID, TIMEZONE
+from bot.utils.helpers import validate_email, sanitize_input, is_rate_limited
+from bot.utils.translations import get_text
 
 router = Router()
 
@@ -203,7 +203,7 @@ async def change_name_get_password(message: Message, state: FSMContext):
         f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}"
     )
     
-    from keyboards.inline import get_order_admin_keyboard
+    from bot.keyboards.inline import get_order_admin_keyboard
     await message.bot.send_message(
         ADMIN_ID,
         admin_msg,
@@ -385,7 +385,7 @@ async def change_photo_get_password(message: Message, state: FSMContext):
         f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}"
     )
     
-    from keyboards.inline import get_order_admin_keyboard
+    from bot.keyboards.inline import get_order_admin_keyboard
     await message.bot.send_message(
         ADMIN_ID,
         admin_msg,
@@ -418,7 +418,7 @@ async def contact_us(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     lang = db.get_user_language(user_id)
     
-    from handlers.chat import open_chat
+    from bot.handlers.chat import open_chat
     await open_chat(callback, state)
 
 
