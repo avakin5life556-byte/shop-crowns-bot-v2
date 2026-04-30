@@ -6,7 +6,7 @@ from bot.keyboards.inline import get_live_chat_keyboard, get_support_rating_keyb
 from bot.keyboards.reply import get_main_keyboard
 from bot.states.support_states import ComplaintStates
 from bot.config import ADMIN_ID
-from bot.datetime import datetime
+from datetime import datetime
 
 router = Router()
 
