@@ -1,8 +1,8 @@
-from typing import Callable, Dict, Any, Awaitable
-from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message
-from database import db
-from utils.helpers import is_rate_limited
+from bot.typing import Callable, Dict, Any, Awaitable
+from bot.aiogram import BaseMiddleware
+from bot.aiogram.types import TelegramObject, Message
+from bot.database import db
+from bot.utils.helpers import is_rate_limited
 import logging
 
 logger = logging.getLogger(__name__)
