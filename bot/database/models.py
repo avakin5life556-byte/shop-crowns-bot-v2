@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional
+from bot.dataclasses import dataclass
+from bot.datetime import datetime
+from bot.typing import Optional
 
 @dataclass
 class User:
