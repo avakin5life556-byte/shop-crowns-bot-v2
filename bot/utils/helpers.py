@@ -1,6 +1,6 @@
 import re
 import json
-from collections import defaultdict
+from bot.collections import defaultdict
 import time
 
 _rate_limit_storage = defaultdict(list)
