@@ -124,10 +124,10 @@ def get_rating_keyboard(lang: str = 'ar') -> ReplyKeyboardMarkup:
     if lang == 'ar':
         buttons = [
             KeyboardButton("⭐ 1"),
-            KeyboardButton("⭐⭐ 2),
+            KeyboardButton("⭐⭐ 2"),
             KeyboardButton("⭐⭐⭐ 3"),
             KeyboardButton("⭐⭐⭐⭐ 4"),
-            KeyboardButton("⭐⭐⭐⭐⭐ 5")
+            KeyboardButton("⭐⭐⭐⭐⭐ 5"),
         ]
     else:
         buttons = [
