@@ -1,7 +1,7 @@
-from bot.aiogram import Router, F
-from bot.aiogram.types import Message, CallbackQuery
-from bot.aiogram.filters import Command
-from bot.aiogram.fsm.context import FSMContext
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from bot.datetime import datetime
 import pytz
 from bot.database.db import db
