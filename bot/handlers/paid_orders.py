@@ -1,15 +1,15 @@
-from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from datetime import datetime
+from bot.aiogram import Router, F, types
+from bot.aiogram.types import Message, CallbackQuery
+from bot.aiogram.fsm.context import FSMContext
+from bot.datetime import datetime
 import json
 import pytz
-from database import db
-from keyboards.inline import get_paid_orders_keyboard, get_order_admin_keyboard, get_back_keyboard
-from keyboards.reply import get_main_keyboard
-from states.order_states import PaidOrderStates
-from config import ADMIN_ID, TIMEZONE
-from utils.helpers import is_rate_limited
+from bot.database import db
+from bot.keyboards.inline import get_paid_orders_keyboard, get_order_admin_keyboard, get_back_keyboard
+from bot.keyboards.reply import get_main_keyboard
+from bot.states.order_states import PaidOrderStates
+from bot.config import ADMIN_ID, TIMEZONE
+from bot.utils.helpers import is_rate_limited
 
 router = Router()
 
