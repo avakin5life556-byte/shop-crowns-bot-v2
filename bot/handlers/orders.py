@@ -6,7 +6,7 @@ from bot.keyboards.inline import get_yes_no_keyboard, get_contact_button, get_or
 from bot.keyboards.reply import get_main_keyboard
 from bot.states.order_states import ChangeNameStates, ChangePhotoStates
 from bot.config import ADMIN_ID, TIMEZONE
-from bot.datetime import datetime
+from datetime import datetime
 import json
 
 router = Router()
