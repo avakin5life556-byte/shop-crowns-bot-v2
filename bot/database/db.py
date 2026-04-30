@@ -1,7 +1,7 @@
 import sqlite3
 import threading
-from datetime import datetime
-from typing import Optional, Dict, List, Any
+from bot.datetime import datetime
+from bot.typing import Optional, Dict, List, Any
 import pytz
 
 TIMEZONE = pytz.timezone('Africa/Cairo')
