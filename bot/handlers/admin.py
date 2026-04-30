@@ -2,7 +2,7 @@ from aiogram import Router, F, types
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-from bot.datetime import datetime
+from datetime import datetime
 import os
 import asyncio
 from bot.database.db import db
