@@ -1,6 +1,6 @@
 import sqlite3
 import threading
-from bot.datetime import datetime
+from datetime import datetime
 from bot.typing import Optional, Dict, List, Any
 import pytz
 
