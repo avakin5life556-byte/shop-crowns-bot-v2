@@ -1,4 +1,4 @@
-from bot.typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional
 from bot.database.db import db
 
 # ========== النظام القديم (الكامل) ==========
