@@ -1,4 +1,4 @@
-from bot.aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import State, StatesGroup
 
 class ComplaintStates(StatesGroup):
     WAITING_MESSAGE = State()
