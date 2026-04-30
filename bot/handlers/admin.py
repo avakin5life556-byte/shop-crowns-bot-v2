@@ -1,8 +1,8 @@
-from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery, FSInputFile
-from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command
-from datetime import datetime
+from bot.aiogram import Router, F, types
+from bot.aiogram.types import Message, CallbackQuery, FSInputFile
+from bot.aiogram.fsm.context import FSMContext
+from bot.aiogram.filters import Command
+from bot.datetime import datetime
 import os
 import asyncio
 from bot.database.db import db
@@ -15,7 +15,7 @@ from bot.keyboards.inline import (
 )
 from bot.states.admin_states import AdminControlStates, AdminReplyStates
 from bot.utils.translations import get_text
-from config import ADMIN_ID, TIMEZONE
+from bot.config import ADMIN_ID, TIMEZONE
 
 router = Router()
 
