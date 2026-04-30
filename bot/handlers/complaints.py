@@ -1,14 +1,14 @@
-from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from datetime import datetime
+from bot.aiogram import Router, F, types
+from bot.aiogram.types import Message, CallbackQuery
+from bot.aiogram.fsm.context import FSMContext
+from bot.datetime import datetime
 import pytz
-from database import db
-from keyboards.inline import get_complaints_keyboard, get_live_chat_keyboard, get_back_keyboard, get_support_rating_keyboard
-from keyboards.reply import get_main_keyboard
-from states.complaint_states import ComplaintStates
-from config import ADMIN_ID, TIMEZONE
-from utils.helpers import is_rate_limited, sanitize_input
+from bot.database import db
+from bot.keyboards.inline import get_complaints_keyboard, get_live_chat_keyboard, get_back_keyboard, get_support_rating_keyboard
+from bot.keyboards.reply import get_main_keyboard
+from bot.states.complaint_states import ComplaintStates
+from bot.config import ADMIN_ID, TIMEZONE
+from bot.utils.helpers import is_rate_limited, sanitize_input
 
 router = Router()
 
@@ -116,7 +116,7 @@ async def receive_ticket_message(message: Message, state: FSMContext):
         f"استخدم الأزرار أدناه للتحكم:"
     )
     
-    from keyboards.inline import get_ticket_admin_keyboard
+    from bot.keyboards.inline import get_ticket_admin_keyboard
     await message.bot.send_message(
         ADMIN_ID,
         admin_msg,
@@ -186,7 +186,7 @@ async def open_live_chat(callback: CallbackQuery, state: FSMContext):
         f"المستخدم ينتظر الرد..."
     )
     
-    from keyboards.inline import get_admin_chat_keyboard
+    from bot.keyboards.inline import get_admin_chat_keyboard
     await callback.bot.send_message(
         ADMIN_ID,
         admin_msg,
@@ -232,7 +232,7 @@ async def handle_live_chat_message(message: Message, state: FSMContext):
         f"⏰ {datetime.now(TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}"
     )
     
-    from keyboards.inline import get_admin_reply_keyboard
+    from bot.keyboards.inline import get_admin_reply_keyboard
     await message.bot.send_message(
         ADMIN_ID,
         admin_msg,
