@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from bot.datetime import datetime
+from datetime import datetime
 import pytz
 from bot.database.db import db
 from bot.keyboards.reply import get_main_keyboard, get_admin_keyboard
