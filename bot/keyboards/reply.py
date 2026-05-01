@@ -12,44 +12,44 @@ def get_main_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
     
     if lang == 'ar':
         buttons = [
-            [KeyboardButton('🎮 المودات')],
-            [KeyboardButton('💰 طلبات الشراء')],
-            [KeyboardButton('🎁 الطلبات المجانية')],
-            [KeyboardButton('📝 الشكاوى')],
-            [KeyboardButton('🌍 تغيير اللغة')],
-            [KeyboardButton('⭐ تقييم البوت')],
-            [KeyboardButton('🚀 خدمة شحن كاملة')]
+            [KeyboardButton(text='🎮 المودات')],
+            [KeyboardButton(text='💰 طلبات الشراء')],
+            [KeyboardButton(text='🎁 الطلبات المجانية')],
+            [KeyboardButton(text='📝 الشكاوى')],
+            [KeyboardButton(text='🌍 تغيير اللغة')],
+            [KeyboardButton(text='⭐ تقييم البوت')],
+            [KeyboardButton(text='🚀 خدمة شحن كاملة')]
         ]
     else:
         buttons = [
-            [KeyboardButton('🎮 Mods')],
-            [KeyboardButton('💰 Purchase Requests')],
-            [KeyboardButton('🎁 Free Requests')],
-            [KeyboardButton('📝 Complaints')],
-            [KeyboardButton('🌍 Change Language')],
-            [KeyboardButton('⭐ Rate Bot')],
-            [KeyboardButton('🚀 Full Shipping Service')]
+            [KeyboardButton(text='🎮 Mods')],
+            [KeyboardButton(text='💰 Purchase Requests')],
+            [KeyboardButton(text='🎁 Free Requests')],
+            [KeyboardButton(text='📝 Complaints')],
+            [KeyboardButton(text='🌍 Change Language')],
+            [KeyboardButton(text='⭐ Rate Bot')],
+            [KeyboardButton(text='🚀 Full Shipping Service')]
         ]
     
     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
     return keyboard
 
 
-def get_admin_keyboard() -> ReplyKeyboardMarkup:
+def get_admin_keyboard(user_id: int = None) -> ReplyKeyboardMarkup:
     """
     لوحة تحكم الأدمن (ثابتة بالعربية) - Updated version from new file
     """
     buttons = [
-        [KeyboardButton('📊 الإحصائيات')],
-        [KeyboardButton('📢 إذاعة')],
-        [KeyboardButton('🚫 حظر مستخدم')],
-        [KeyboardButton('✅ فك حظر')],
-        [KeyboardButton('📋 الطلبات')],
-        [KeyboardButton('📝 التذاكر')],
-        [KeyboardButton('📜 السجلات')],
-        [KeyboardButton('👥 المستخدمين')],
-        [KeyboardButton('🎮 تحكم في البوت')],
-        [KeyboardButton('📊 التقييمات')]
+        [KeyboardButton(text='📊 الإحصائيات')],
+        [KeyboardButton(text='📢 إذاعة')],
+        [KeyboardButton(text='🚫 حظر مستخدم')],
+        [KeyboardButton(text='✅ فك حظر')],
+        [KeyboardButton(text='📋 الطلبات')],
+        [KeyboardButton(text='📝 التذاكر')],
+        [KeyboardButton(text='📜 السجلات')],
+        [KeyboardButton(text='👥 المستخدمين')],
+        [KeyboardButton(text='🎮 تحكم في البوت')],
+        [KeyboardButton(text='📊 التقييمات')]
     ]
     markup = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
     return markup
@@ -118,19 +118,19 @@ def get_rating_keyboard(lang: str = 'ar') -> ReplyKeyboardMarkup:
     """
     if lang == 'ar':
         buttons = [
-            [KeyboardButton("⭐ 1")],
-            [KeyboardButton("⭐⭐ 2")],
-            [KeyboardButton("⭐⭐⭐ 3")],
-            [KeyboardButton("⭐⭐⭐⭐ 4")],
-            [KeyboardButton("⭐⭐⭐⭐⭐ 5")]
+            [KeyboardButton(text="⭐ 1")],
+            [KeyboardButton(text="⭐⭐ 2")],
+            [KeyboardButton(text="⭐⭐⭐ 3")],
+            [KeyboardButton(text="⭐⭐⭐⭐ 4")],
+            [KeyboardButton(text="⭐⭐⭐⭐⭐ 5")]
         ]
     else:
         buttons = [
-            [KeyboardButton("⭐ 1")],
-            [KeyboardButton("⭐⭐ 2")],
-            [KeyboardButton("⭐⭐⭐ 3")],
-            [KeyboardButton("⭐⭐⭐⭐ 4")],
-            [KeyboardButton("⭐⭐⭐⭐⭐ 5")]
+            [KeyboardButton(text="⭐ 1")],
+            [KeyboardButton(text="⭐⭐ 2")],
+            [KeyboardButton(text="⭐⭐⭐ 3")],
+            [KeyboardButton(text="⭐⭐⭐⭐ 4")],
+            [KeyboardButton(text="⭐⭐⭐⭐⭐ 5")]
         ]
     
     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
@@ -146,17 +146,17 @@ def get_mods_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
     
     if lang == 'ar':
         buttons = [
-            [KeyboardButton('☁️ مود سكاي')],
-            [KeyboardButton('🐂 مود الثور')],
-            [KeyboardButton('👑 مود جولد')],
-            [KeyboardButton('🔙 رجوع')]
+            [KeyboardButton(text='☁️ مود سكاي')],
+            [KeyboardButton(text='🐂 مود الثور')],
+            [KeyboardButton(text='👑 مود جولد')],
+            [KeyboardButton(text='🔙 رجوع')]
         ]
     else:
         buttons = [
-            [KeyboardButton('☁️ Sky Mod')],
-            [KeyboardButton('🐂 Bull Mod')],
-            [KeyboardButton('👑 Gold Mod')],
-            [KeyboardButton('🔙 Back')]
+            [KeyboardButton(text='☁️ Sky Mod')],
+            [KeyboardButton(text='🐂 Bull Mod')],
+            [KeyboardButton(text='👑 Gold Mod')],
+            [KeyboardButton(text='🔙 Back')]
         ]
     
     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
@@ -172,15 +172,15 @@ def get_complaints_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMark
     
     if lang == 'ar':
         buttons = [
-            [KeyboardButton('📝 إنشاء تذكرة شكوى')],
-            [KeyboardButton('💬 فتح شات مباشر')],
-            [KeyboardButton('🔙 رجوع')]
+            [KeyboardButton(text='📝 إنشاء تذكرة شكوى')],
+            [KeyboardButton(text='💬 فتح شات مباشر')],
+            [KeyboardButton(text='🔙 رجوع')]
         ]
     else:
         buttons = [
-            [KeyboardButton('📝 Create Complaint Ticket')],
-            [KeyboardButton('💬 Open Live Chat')],
-            [KeyboardButton('🔙 Back')]
+            [KeyboardButton(text='📝 Create Complaint Ticket')],
+            [KeyboardButton(text='💬 Open Live Chat')],
+            [KeyboardButton(text='🔙 Back')]
         ]
     
     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
@@ -196,23 +196,23 @@ def get_paid_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMar
     
     if lang == 'ar':
         buttons = [
-            [KeyboardButton('🟣 شراء كراونز')],
-            [KeyboardButton('🟡 شراء كوينز')],
-            [KeyboardButton('💳 شراء عضويات')],
-            [KeyboardButton('🤖 تعزيز الحسابات')],
-            [KeyboardButton('❤️ لايكات ومشاهدات')],
-            [KeyboardButton('🎮 ألعاب أخرى')],
-            [KeyboardButton('🔙 رجوع')]
+            [KeyboardButton(text='🟣 شراء كراونز')],
+            [KeyboardButton(text='🟡 شراء كوينز')],
+            [KeyboardButton(text='💳 شراء عضويات')],
+            [KeyboardButton(text='🤖 تعزيز الحسابات')],
+            [KeyboardButton(text='❤️ لايكات ومشاهدات')],
+            [KeyboardButton(text='🎮 ألعاب أخرى')],
+            [KeyboardButton(text='🔙 رجوع')]
         ]
     else:
         buttons = [
-            [KeyboardButton('🟣 Buy Crowns')],
-            [KeyboardButton('🟡 Buy Coins')],
-            [KeyboardButton('💳 Buy VIP')],
-            [KeyboardButton('🤖 Boost Account')],
-            [KeyboardButton('❤️ Likes & Views')],
-            [KeyboardButton('🎮 Other Games')],
-            [KeyboardButton('🔙 Back')]
+            [KeyboardButton(text='🟣 Buy Crowns')],
+            [KeyboardButton(text='🟡 Buy Coins')],
+            [KeyboardButton(text='💳 Buy VIP')],
+            [KeyboardButton(text='🤖 Boost Account')],
+            [KeyboardButton(text='❤️ Likes & Views')],
+            [KeyboardButton(text='🎮 Other Games')],
+            [KeyboardButton(text='🔙 Back')]
         ]
     
     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
@@ -228,17 +228,17 @@ def get_free_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMar
     
     if lang == 'ar':
         buttons = [
-            [KeyboardButton('✏️ تغيير الاسم')],
-            [KeyboardButton('🖼 تغيير الصورة')],
-            [KeyboardButton('📌 المزيد')],
-            [KeyboardButton('🔙 رجوع')]
+            [KeyboardButton(text='✏️ تغيير الاسم')],
+            [KeyboardButton(text='🖼 تغيير الصورة')],
+            [KeyboardButton(text='📌 المزيد')],
+            [KeyboardButton(text='🔙 رجوع')]
         ]
     else:
         buttons = [
-            [KeyboardButton('✏️ Change Name')],
-            [KeyboardButton('🖼 Change Photo')],
-            [KeyboardButton('📌 More')],
-            [KeyboardButton('🔙 Back')]
+            [KeyboardButton(text='✏️ Change Name')],
+            [KeyboardButton(text='🖼 Change Photo')],
+            [KeyboardButton(text='📌 More')],
+            [KeyboardButton(text='🔙 Back')]
         ]
     
     keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
