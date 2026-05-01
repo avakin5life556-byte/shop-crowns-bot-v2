@@ -21,7 +21,7 @@ class RateLimitMiddleware(BaseMiddleware):
             if is_rate_limited(user_id, 'global', limit=30, window=60):
                 await event.answer("⚠️ أرسلت رسائل كثيرة، انتظر قليلاً")
                 return
-            db.update_last_active(user_id)
+            # db.update_last_active(user_id)
         
         return await handler(event, data)
 
