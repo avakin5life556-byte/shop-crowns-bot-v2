@@ -288,3 +288,16 @@ def get_main_keyboard_inline(lang: str = 'ar') -> InlineKeyboardMarkup:
     )
     markup.add(InlineKeyboardButton(text=TRANSLATIONS[lang]['back'], callback_data="back_main"))
     return markup
+
+
+# ========= New Back Keyboard =========
+
+def get_back_keyboard(lang: str = "ar") -> InlineKeyboardMarkup:
+    text = "رجوع" if lang == "ar" else "Back"
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton(text=text, callback_data="back")
+    )
+
+    return keyboard
