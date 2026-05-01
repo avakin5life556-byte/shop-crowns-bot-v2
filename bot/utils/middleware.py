@@ -4,6 +4,7 @@ from aiogram.types import TelegramObject, Message
 from bot.database import db
 from bot.utils.helpers import is_rate_limited
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -22,4 +23,23 @@ class RateLimitMiddleware(BaseMiddleware):
                 return
             db.update_last_active(user_id)
         
+        return await handler(event, data)
+
+
+class AntiFloodMiddleware(BaseMiddleware):
+    def __init__(self, limit: float = 1.0):
+        self.limit = limit
+        self.last_time = {}
+
+    async def __call__(self, handler, event, data):
+        if isinstance(event, Message):
+            user_id = event.from_user.id
+            now = time.time()
+
+            if user_id in self.last_time:
+                if now - self.last_time[user_id] < self.limit:
+                    return  # منع السبام
+
+            self.last_time[user_id] = now
+
         return await handler(event, data)
