@@ -18,16 +18,16 @@ class RateLimitMiddleware(BaseMiddleware):
     ) -> Any:
         if isinstance(event, Message):
             user_id = event.from_user.id
-if is_rate_limited(user_id, 'global', limit=30, window=60):
-    await event.answer("⚠️ أرسلت رسائل كثيرة، انتظر قليلاً")
-    logger.warning(f"Rate limit triggered for user {user_id}")  
+            if is_rate_limited(user_id, 'global', limit=30, window=60):
+                await event.answer("⚠️ أرسلت رسائل كثيرة، انتظر قليلاً")
+                logger.warning(f"Rate limit triggered for user {user_id}")
             # db.update_last_active(user_id)
         
         return await handler(event, data)
 
 
 class AntiFloodMiddleware(BaseMiddleware):
-    def __init__(self, limit: float = 0.5):  # زيادة المرونة
+    def __init__(self, limit: float = 0.5):
         self.limit = limit
         self.last_time = {}
 
@@ -44,9 +44,8 @@ class AntiFloodMiddleware(BaseMiddleware):
             if user_id in self.last_time:
                 if now - self.last_time[user_id] < self.limit:
                     logger.warning(f"Anti-flood: user {user_id} is spamming")
-                    # 🚀 **الحل: لا نمنع الرسالة بل نمررها للـ Handler**
-                    # return  
-                    pass  
+                    # لا نمنع الرسالة، نمررها للـ handler
+                    pass
 
             self.last_time[user_id] = now
 
