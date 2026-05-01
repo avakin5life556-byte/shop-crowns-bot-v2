@@ -36,12 +36,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Register middleware
+# ✅ Register middleware (لن تمنع وصول الأمر /start)
 dp.message.middleware(RateLimitMiddleware())
 dp.callback_query.middleware(RateLimitMiddleware())
 dp.message.middleware(AntiFloodMiddleware())
 
-# Register all handlers
+# ✅ Register all handlers
 register_start_handlers(dp)
 register_admin_handlers(dp)
 register_ban_handlers(dp)
@@ -61,16 +61,19 @@ logger.info("✅ All handlers registered successfully")
 
 # ========== Startup Event ==========
 async def on_startup():
+    """Called when bot starts"""
     logger.info("🚀 Shop Crowns Bot started")
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.send_message(ADMIN_ID, "✅ البوت شغال بكفاءة عالية")
     
+    # Start background tasks
     asyncio.create_task(check_timeouts_periodically())
     logger.info("🕐 Timeout checker started")
     
     asyncio.create_task(session_manager.start_cleanup_task())
     logger.info("🧹 Session cleanup task started")
     
+    # Verify database connection
     try:
         db.update_last_active(ADMIN_ID)
         logger.info("✅ Database connected")
@@ -80,6 +83,7 @@ async def on_startup():
 
 # ========== Shutdown Event ==========
 async def on_shutdown():
+    """Called when bot shuts down"""
     logger.info("🛑 Bot shutting down")
     db.close()
     logger.info("✅ Database closed")
@@ -89,6 +93,7 @@ async def on_shutdown():
 
 # ========== Signal Handlers ==========
 def signal_handler(signum, frame):
+    """Handle shutdown signals"""
     logger.info(f"Received signal {signum}, initiating shutdown...")
     asyncio.create_task(on_shutdown())
     sys.exit(0)
@@ -99,6 +104,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # ========== Main Entry Point ==========
 async def main():
+    """Main function to run the bot"""
     try:
         dp.startup.register(on_startup)
         dp.shutdown.register(on_shutdown)
