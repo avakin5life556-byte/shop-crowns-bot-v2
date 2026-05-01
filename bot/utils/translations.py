@@ -247,3 +247,13 @@ def get_menu_title(lang: str = "ar", menu: str = "main_menu") -> str:
 def get_supported_languages() -> List[str]:
     """Get list of supported languages"""
     return list(TRANSLATIONS.keys())
+
+
+# ========== دوال مساعدة إضافية ==========
+
+def get_language_name(lang: str) -> str:
+    languages = {
+        "ar": "العربية",
+        "en": "English"
+    }
+    return languages.get(lang, lang)
