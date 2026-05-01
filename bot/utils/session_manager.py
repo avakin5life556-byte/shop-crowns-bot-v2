@@ -1,3 +1,5 @@
+import asyncio
+
 class SessionManager:
     def __init__(self):
         self.sessions = {}
@@ -16,6 +18,11 @@ class SessionManager:
     def delete_session(self, user_id: int):
         if user_id in self.sessions:
             del self.sessions[user_id]
+
+    async def start_cleanup_task(self):
+        while True:
+            await asyncio.sleep(60)
+            # حالياً لا يوجد تنظيف حقيقي، مجرد loop لتجنب الخطأ
 
 
 # instance جاهز للاستخدام
