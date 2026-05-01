@@ -63,6 +63,7 @@ logger.info("All handlers registered successfully")
 async def on_startup():
     """Called when bot starts"""
     logger.info("🚀 Shop Crowns Bot started")
+    await bot.delete_webhook(drop_pending_updates=True)
     await bot.send_message(ADMIN_ID, "✅ البوت شغال بكفاءة عالية")
     
     # Start timeout checker background task
