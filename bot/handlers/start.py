@@ -22,26 +22,30 @@ async def cmd_start(message: types.Message, state: FSMContext):
     full_name = message.from_user.full_name
     username = message.from_user.username or ""
     language_code = message.from_user.language_code or "ar"
-    
+
+    # Check if user is banned
     if db.is_user_banned(user_id):
         await message.answer(get_text(user_id, "messages.banned"), parse_mode='Markdown')
         return
-    
+
+    # Register user
     db.register_user(user_id, full_name, username, language_code)
     db.update_last_active(user_id)
     await state.clear()
-    
+
+    # Send welcome message
     welcome_text = get_text(user_id, "messages.welcome_new")
     await message.answer(
         welcome_text,
         reply_markup=get_main_keyboard(user_id),
         parse_mode='Markdown'
     )
-    
+
+    # Notify admin
     stats = db.get_stats()
     total_users = stats['active'] + stats['banned']
     now = datetime.now(TIMEZONE)
-    
+
     admin_msg = get_text(
         user_id, 
         "messages.new_user_notification",
@@ -53,11 +57,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
     )
     await message.bot.send_message(ADMIN_ID, admin_msg, parse_mode='Markdown')
     db.log_admin_action(ADMIN_ID, 'user_registered', user_id, None, f'New user: {full_name}')
-    logger.info(f"✅ /start processed for user {user_id}")
+    
+    logger.info(f"✅ /start processed successfully for user {user_id}")
 
 
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
+    """Handler for /admin command"""
     user_id = message.from_user.id
     if user_id != ADMIN_ID:
         await message.answer(get_text(user_id, "messages.error"), parse_mode='Markdown')
@@ -72,6 +78,7 @@ async def cmd_admin(message: types.Message):
 @router.message(Command("language"))
 @router.message(Command("lang"))
 async def cmd_language(message: types.Message):
+    """Handler for /language command"""
     user_id = message.from_user.id
     if db.is_user_banned(user_id):
         await message.answer(get_text(user_id, "messages.banned"), parse_mode='Markdown')
@@ -85,6 +92,7 @@ async def cmd_language(message: types.Message):
 
 @router.message(lambda m: m.text in ["🌍 تغيير اللغة", "🌍 Change Language"])
 async def change_language_button(message: types.Message):
+    """Handler for language change button"""
     user_id = message.from_user.id
     if db.is_user_banned(user_id):
         await message.answer(get_text(user_id, "messages.banned"), parse_mode='Markdown')
@@ -98,15 +106,16 @@ async def change_language_button(message: types.Message):
 
 @router.callback_query(lambda c: c.data.startswith("lang_"))
 async def set_language(callback: types.CallbackQuery, state: FSMContext):
+    """Handler for setting user language"""
     user_id = callback.from_user.id
     new_lang = callback.data.split('_')[1]
     if new_lang not in get_supported_languages():
         new_lang = 'ar'
-    
+
     db.set_user_language(user_id, new_lang)
     db.update_last_active(user_id)
     await state.clear()
-    
+
     await callback.message.edit_text(
         get_text(user_id, "messages.language_changed"),
         reply_markup=None,
@@ -122,9 +131,11 @@ async def set_language(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
+    """Handler for /help command"""
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
-    help_text = (
+    
+    help_text_ar = (
         "📚 **قائمة الأوامر المتاحة**\n\n"
         "/start - بدء البوت\n"
         "/help - عرض هذه المساعدة\n"
@@ -136,7 +147,8 @@ async def cmd_help(message: types.Message):
         "📝 الشكاوى - تقديم شكوى أو استفسار\n"
         "⭐ تقييم البوت - تقييم الخدمة\n"
         "🌍 تغيير اللغة - تغيير لغة البوت"
-        if lang == 'ar' else
+    )
+    help_text_en = (
         "📚 **Available Commands**\n\n"
         "/start - Start the bot\n"
         "/help - Show this help\n"
@@ -149,8 +161,11 @@ async def cmd_help(message: types.Message):
         "⭐ Rate Bot - Rate the service\n"
         "🌍 Change Language - Change bot language"
     )
+    
+    help_text = help_text_ar if lang == 'ar' else help_text_en
     await message.answer(help_text, parse_mode='Markdown', reply_markup=get_main_keyboard(user_id))
 
 
 def register_start_handlers(dp):
+    """Register all start handlers"""
     dp.include_router(router)
