@@ -18,7 +18,7 @@ class RateLimitMiddleware(BaseMiddleware):
     ) -> Any:
         if isinstance(event, Message):
             user_id = event.from_user.id
-            if is_rate_limited(user_id, 'global', limit=30, window=60):
+if is_rate_limited(user_id, 'global', limit=30, window=60):
     await event.answer("⚠️ أرسلت رسائل كثيرة، انتظر قليلاً")
     logger.warning(f"Rate limit triggered for user {user_id}")  
             # db.update_last_active(user_id)
