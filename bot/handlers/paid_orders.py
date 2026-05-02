@@ -1,11 +1,12 @@
-from aiogram import Router, F, types
+from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime
 import json
 import logging
-from bot.database.db import db  # تصحيح المسار
-from bot.keyboards.inline import get_paid_orders_keyboard, get_order_admin_keyboard, get_back_keyboard
+from bot.database.db import db
+from bot.keyboards.reply import get_paid_orders_keyboard, get_back_keyboard
+from bot.keyboards.inline import get_order_admin_keyboard
 from bot.keyboards.reply import get_main_keyboard
 from bot.states.order_states import PaidOrderStates
 from bot.config import ADMIN_ID, TIMEZONE
@@ -50,27 +51,70 @@ PAID_ORDERS = {
     }
 }
 
+# Mapping بين نص الزر و order_key
+BUTTON_TO_KEY = {
+    '🟣 شراء كراونز': 'buy_crowns',
+    '🟡 شراء كوينز': 'buy_coins',
+    '💳 شراء عضويات': 'buy_vip',
+    '🤖 تعزيز الحسابات': 'boost_account',
+    '❤️ لايكات ومشاهدات': 'buy_likes',
+    '🎮 ألعاب أخرى': 'other_games',
+    '🟣 Buy Crowns': 'buy_crowns',
+    '🟡 Buy Coins': 'buy_coins',
+    '💳 Buy VIP': 'buy_vip',
+    '🤖 Boost Account': 'boost_account',
+    '❤️ Likes & Views': 'buy_likes',
+    '🎮 Other Games': 'other_games'
+}
 
-def safe_get_text(lang: str, key: str, default_ar: str = "", default_en: str = "") -> str:
+
+def safe_get_text(lang: str, key: str, **kwargs) -> str:
     """دالة آمنة للحصول على النصوص مع fallback"""
-    if key == 'banned':
-        return "🚫 **تم حظرك من البوت**" if lang == 'ar' else "🚫 **You are banned**"
-    elif key == 'rate_limited':
-        return "⚠️ **أرسلت طلبات كثيرة، انتظر قليلاً**" if lang == 'ar' else "⚠️ **Too many requests, wait**"
-    elif key == 'ticket_created':
-        return "✅ **تم فتح تذكرة دعم لطلبك**" if lang == 'ar' else "✅ **Support ticket opened for your request**"
-    elif key == 'order_completed':
-        return "✅ **تم تنفيذ طلبك بنجاح**\n\nيمكنك مراجعة حسابك الآن.\nشكراً لاستخدامك متجرنا 🤍" if lang == 'ar' else "✅ **Your order has been completed successfully**\n\nYou can check your account now.\nThank you for using our store 🤍"
-    elif key == 'order_processing':
-        return "🔄 **جاري تنفيذ طلبك**\n\nسيتم إعلامك عند الانتهاء.\nشكراً لانتظارك 🤍" if lang == 'ar' else "🔄 **Your order is being processed**\n\nYou will be notified when completed.\nThank you for your patience 🤍"
-    elif key == 'order_cancelled':
-        return "❌ **تم إلغاء طلبك**\n\nعذراً، تم إلغاء طلبك.\nيمكنك التواصل مع الدعم الفني لمزيد من المعلومات." if lang == 'ar' else "❌ **Your order has been cancelled**\n\nSorry, your order has been cancelled.\nYou can contact support for more information."
-    elif key == 'no_active_ticket':
-        return "⚠️ **لا توجد تذكرة نشطة لهذا المستخدم**" if lang == 'ar' else "⚠️ **No active ticket for this user**"
-    elif key == 'ticket_reopened':
-        return "✅ **تم إعادة فتح التذكرة**" if lang == 'ar' else "✅ **Ticket reopened**"
+    texts = {
+        'banned': {
+            'ar': "🚫 **تم حظرك من البوت**",
+            'en': "🚫 **You are banned**"
+        },
+        'rate_limited': {
+            'ar': "⚠️ **أرسلت طلبات كثيرة، انتظر قليلاً**",
+            'en': "⚠️ **Too many requests, wait**"
+        },
+        'ticket_created': {
+            'ar': "✅ **تم فتح تذكرة دعم لطلبك**",
+            'en': "✅ **Support ticket opened for your request**"
+        },
+        'order_completed': {
+            'ar': "✅ **تم تنفيذ طلبك بنجاح**\n\nيمكنك مراجعة حسابك الآن.\nشكراً لاستخدامك متجرنا 🤍",
+            'en': "✅ **Your order has been completed successfully**\n\nYou can check your account now.\nThank you for using our store 🤍"
+        },
+        'order_processing': {
+            'ar': "🔄 **جاري تنفيذ طلبك**\n\nسيتم إعلامك عند الانتهاء.\nشكراً لانتظارك 🤍",
+            'en': "🔄 **Your order is being processed**\n\nYou will be notified when completed.\nThank you for your patience 🤍"
+        },
+        'order_cancelled': {
+            'ar': "❌ **تم إلغاء طلبك**\n\nعذراً، تم إلغاء طلبك.\nيمكنك التواصل مع الدعم الفني لمزيد من المعلومات.",
+            'en': "❌ **Your order has been cancelled**\n\nSorry, your order has been cancelled.\nYou can contact support for more information."
+        },
+        'no_active_ticket': {
+            'ar': "⚠️ **لا توجد تذكرة نشطة لهذا المستخدم**",
+            'en': "⚠️ **No active ticket for this user**"
+        },
+        'ticket_reopened': {
+            'ar': "✅ **تم إعادة فتح التذكرة**",
+            'en': "✅ **Ticket reopened**"
+        }
+    }
     
-    return default_ar if lang == 'ar' else default_en
+    if key in texts:
+        text = texts[key].get(lang, texts[key]['ar'])
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except Exception:
+                pass
+        return text
+    
+    return texts.get('banned', {}).get(lang, "حدث خطأ") if lang == 'ar' else "An error occurred"
 
 
 def safe_get_order_info(order_key: str, lang: str) -> dict:
@@ -89,6 +133,8 @@ def safe_get_order_info(order_key: str, lang: str) -> dict:
 def safe_split_callback(callback_data: str, expected_parts: int = 3) -> list:
     """تقسيم بيانات الكول باك بشكل آمن"""
     try:
+        if not callback_data:
+            return []
         parts = callback_data.split('_')
         if len(parts) < expected_parts:
             logger.error(f"Invalid callback data format: {callback_data}, expected {expected_parts} parts, got {len(parts)}")
@@ -115,33 +161,35 @@ async def show_paid_orders(message: Message):
     
     await message.answer(
         title,
-        reply_markup=get_paid_orders_keyboard(lang),
+        reply_markup=get_paid_orders_keyboard(user_id, lang),
         parse_mode='Markdown'
     )
 
 
-# ========== معالج اختيار أي زر من أزرار الشراء ==========
-@router.callback_query(F.data.in_(PAID_ORDERS.keys()))
-async def handle_paid_order(callback: CallbackQuery, state: FSMContext):
+# ========== معالج اختيار أي زر من أزرار الشراء (Reply Keyboard) ==========
+@router.message(F.text.in_(list(BUTTON_TO_KEY.keys())))
+async def handle_paid_order(message: Message, state: FSMContext):
     """معالج اختيار خدمة مدفوعة - فتح تذكرة دعم"""
-    user_id = callback.from_user.id
-    order_key = callback.data
+    user_id = message.from_user.id
+    button_text = message.text
     lang = db.get_user_language(user_id)
     
-    # التحقق من وجود callback.data
-    if not callback.data:
-        await callback.answer("❌ حدث خطأ", show_alert=True)
+    # الحصول على order_key من النص
+    order_key = BUTTON_TO_KEY.get(button_text)
+    if not order_key:
+        logger.warning(f"Unknown button text: {button_text} for user {user_id}")
+        await message.answer("❌ حدث خطأ، الرجاء المحاولة مرة أخرى", parse_mode='Markdown')
         return
     
     # التحقق من الحظر
     if db.is_user_banned(user_id):
-        await callback.answer(safe_get_text(lang, 'banned'), show_alert=True)
+        await message.answer(safe_get_text(lang, 'banned'), parse_mode='Markdown')
         return
     
     # التحقق من معدل الطلبات
     try:
         if is_rate_limited(user_id, 'paid_order', limit=5, window=300):
-            await callback.answer(safe_get_text(lang, 'rate_limited'), show_alert=True)
+            await message.answer(safe_get_text(lang, 'rate_limited'), parse_mode='Markdown')
             return
     except Exception as e:
         logger.error(f"Rate limit error for user {user_id}: {e}")
@@ -152,14 +200,19 @@ async def handle_paid_order(callback: CallbackQuery, state: FSMContext):
     order_type = order_info['type']
     
     # إنشاء تذكرة دعم
-    ticket_data = db.create_ticket(user_id, 'paid_order', f'طلب {order_type} - تم فتح تذكرة')
-    
-    if not ticket_data or not ticket_data[0] or not ticket_data[1]:
-        logger.error(f"Failed to create ticket for user {user_id}")
-        await callback.answer("❌ حدث خطأ في فتح التذكرة", show_alert=True)
+    try:
+        ticket_data = db.create_ticket(user_id, 'paid_order', f'طلب {order_type} - تم فتح تذكرة')
+        
+        if not ticket_data or not ticket_data[0] or not ticket_data[1]:
+            logger.error(f"Failed to create ticket for user {user_id}")
+            await message.answer("❌ حدث خطأ في فتح التذكرة", parse_mode='Markdown')
+            return
+        
+        ticket_number, ticket_id = ticket_data
+    except Exception as e:
+        logger.error(f"Error creating ticket for user {user_id}: {e}")
+        await message.answer("❌ حدث خطأ في فتح التذكرة", parse_mode='Markdown')
         return
-    
-    ticket_number, ticket_id = ticket_data
     
     # تخزين معلومات الطلب في FSM
     await state.update_data(
@@ -178,42 +231,38 @@ async def handle_paid_order(callback: CallbackQuery, state: FSMContext):
         f"يمكنك متابعة طلبك عبر الدعم الفني."
     )
     
-    try:
-        await callback.message.edit_text(
-            success_text,
-            reply_markup=get_back_keyboard(lang),
-            parse_mode='Markdown'
-        )
-    except Exception as e:
-        logger.error(f"Error editing message for user {user_id}: {e}")
-        await callback.message.answer(success_text, parse_mode='Markdown')
-    
-    # إرسال إشعار للأدمن
-    user_info = db.get_user_info(user_id)
-    now = datetime.now(TIMEZONE)
-    
-    user_name = user_info.get('name', 'غير معروف') if user_info else 'غير معروف'
-    user_username = user_info.get('username', 'لا يوجد') if user_info else 'لا يوجد'
-    user_country = user_info.get('country', 'غير معروف') if user_info else 'غير معروف'
-    
-    admin_msg = (
-        f"💰 **طلب شراء جديد**\n\n"
-        f"🎫 **رقم التذكرة:** `{ticket_number}`\n"
-        f"📦 **الخدمة:** {order_type}\n"
-        f"👤 **الاسم:** {user_name}\n"
-        f"🆔 **User ID:** `{user_id}`\n"
-        f"📝 **Username:** @{user_username}\n"
-        f"🗣️ **اللغة:** {lang}\n"
-        f"🌍 **الدولة:** {user_country}\n"
-        f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        f"استخدم الأزرار أدناه للتحكم في الطلب:"
+    await message.answer(
+        success_text,
+        reply_markup=get_back_keyboard(user_id, lang),
+        parse_mode='Markdown'
     )
     
-    # إنشاء رقم طلب وهمي للتتبع (سيتم إنشاء طلب حقيقي عند التنفيذ)
-    temp_order_number = f"PO-{now.strftime('%Y%m%d%H%M%S')}"
-    
+    # إرسال إشعار للأدمن
     try:
-        await callback.bot.send_message(
+        user_info = db.get_user_info(user_id)
+        now = datetime.now(TIMEZONE)
+        
+        user_name = user_info.get('name', 'غير معروف') if user_info else 'غير معروف'
+        user_username = user_info.get('username', 'لا يوجد') if user_info else 'لا يوجد'
+        user_country = user_info.get('country', 'غير معروف') if user_info else 'غير معروف'
+        
+        admin_msg = (
+            f"💰 **طلب شراء جديد**\n\n"
+            f"🎫 **رقم التذكرة:** `{ticket_number}`\n"
+            f"📦 **الخدمة:** {order_type}\n"
+            f"👤 **الاسم:** {user_name}\n"
+            f"🆔 **User ID:** `{user_id}`\n"
+            f"📝 **Username:** @{user_username}\n"
+            f"🗣️ **اللغة:** {lang}\n"
+            f"🌍 **الدولة:** {user_country}\n"
+            f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"استخدم الأزرار أدناه للتحكم في الطلب:"
+        )
+        
+        # إنشاء رقم طلب وهمي للتتبع
+        temp_order_number = f"PO-{now.strftime('%Y%m%d%H%M%S')}"
+        
+        await message.bot.send_message(
             ADMIN_ID,
             admin_msg,
             reply_markup=get_order_admin_keyboard(temp_order_number, user_id),
@@ -222,13 +271,12 @@ async def handle_paid_order(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.error(f"Failed to send admin notification for user {user_id}: {e}")
     
-    # تسجيل إجراء الأدمن
+    # تسجيل إجراء
     try:
         db.log_admin_action(ADMIN_ID, 'paid_order_request', user_id, None, f'طلب {order_type}')
     except Exception as e:
         logger.error(f"Failed to log admin action: {e}")
     
-    await callback.answer()
     logger.info(f"User {user_id} created paid order ticket {ticket_number} for {order_type}")
 
 
@@ -261,27 +309,28 @@ async def handle_paid_order_actions(callback: CallbackQuery, state: FSMContext):
     lang = db.get_user_language(user_id)
     
     # الحصول على معلومات التذكرة المفتوحة للمستخدم
-    active_ticket = db.get_active_ticket_by_user(user_id)
-    
-    if not active_ticket:
-        await callback.answer(safe_get_text(lang, 'no_active_ticket'), show_alert=True)
-        return
-    
-    ticket_number = active_ticket.get('ticket_number')
-    if not ticket_number:
-        await callback.answer("❌ رقم التذكرة غير موجود", show_alert=True)
+    try:
+        active_ticket = db.get_active_ticket_by_user(user_id)
+        
+        if not active_ticket:
+            await callback.answer(safe_get_text(lang, 'no_active_ticket'), show_alert=True)
+            return
+        
+        ticket_number = active_ticket.get('ticket_number')
+        if not ticket_number:
+            await callback.answer("❌ رقم التذكرة غير موجود", show_alert=True)
+            return
+    except Exception as e:
+        logger.error(f"Error getting active ticket for user {user_id}: {e}")
+        await callback.answer("❌ حدث خطأ", show_alert=True)
         return
     
     # تنفيذ الإجراء المطلوب
     try:
         if action == 'done':
-            # تحديث حالة التذكرة
             db.update_ticket_status(ticket_number, 'completed')
-            
-            # تسجيل الإجراء
             db.log_admin_action(ADMIN_ID, 'order_completed', user_id, order_number, f'طلب شراء')
             
-            # إرسال إشعار للمستخدم
             await callback.bot.send_message(
                 user_id,
                 safe_get_text(lang, 'order_completed'),
@@ -293,13 +342,9 @@ async def handle_paid_order_actions(callback: CallbackQuery, state: FSMContext):
             logger.info(f"Admin completed order {order_number} for user {user_id}")
         
         elif action == 'exec':
-            # تحديث حالة التذكرة
             db.update_ticket_status(ticket_number, 'processing')
-            
-            # تسجيل الإجراء
             db.log_admin_action(ADMIN_ID, 'order_processing', user_id, order_number, f'طلب شراء')
             
-            # إرسال إشعار للمستخدم
             await callback.bot.send_message(
                 user_id,
                 safe_get_text(lang, 'order_processing'),
@@ -311,13 +356,9 @@ async def handle_paid_order_actions(callback: CallbackQuery, state: FSMContext):
             logger.info(f"Admin started processing order {order_number} for user {user_id}")
         
         elif action == 'cancel':
-            # تحديث حالة التذكرة
             db.update_ticket_status(ticket_number, 'cancelled')
-            
-            # تسجيل الإجراء
             db.log_admin_action(ADMIN_ID, 'order_cancelled', user_id, order_number, f'طلب شراء')
             
-            # إرسال إشعار للمستخدم
             await callback.bot.send_message(
                 user_id,
                 safe_get_text(lang, 'order_cancelled'),
@@ -401,7 +442,6 @@ async def reopen_ticket(callback: CallbackQuery):
         await callback.answer("⛔ غير مصرح", show_alert=True)
         return
     
-    # تقسيم البيانات بشكل آمن
     parts = safe_split_callback(callback.data, 2)
     if not parts or len(parts) < 2:
         await callback.answer("❌ بيانات غير صالحة", show_alert=True)
