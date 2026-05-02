@@ -197,9 +197,10 @@ async def receive_complaint_message(message: Message, state: FSMContext):
         # إرسال إشعار للأدمن
         user_info = db.get_user_info(user_id)
         now = datetime.now(TIMEZONE)
-        
+
         user_name = user_info.get('name', 'غير معروف') if user_info else 'غير معروف'
-        user_username = user_info.get('username', 'لا يوجد') if user_info else 'لا يوجد'
+        user_username = user_info.get('username') if user_info else None
+        username_display = f"@{user_username}" if user_username else "لا يوجد"
         user_country = user_info.get('country', 'غير معروف') if user_info else 'غير معروف'
         
         admin_msg = (
@@ -207,7 +208,7 @@ async def receive_complaint_message(message: Message, state: FSMContext):
             f"🎫 **رقم التذكرة:** `{ticket_number}`\n"
             f"👤 **الاسم:** {user_name}\n"
             f"🆔 **User ID:** `{user_id}`\n"
-            f"📝 **Username:** @{user_username}\n"
+            f"📝 **Username:** {username_display}\n"
             f"🗣️ **اللغة:** {lang}\n"
             f"🌍 **الدولة:** {user_country}\n"
             f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
