@@ -253,7 +253,7 @@ def get_free_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMar
         buttons = [
             [KeyboardButton(text='✏️ تغيير الاسم')],
             [KeyboardButton(text='🖼 تغيير الصورة')],
-            [KeyboardButton(text='📌 المزيد']),
+            [KeyboardButton(text='📌 المزيد')],
             [KeyboardButton(text='🔙 رجوع')]
         ]
     else:
