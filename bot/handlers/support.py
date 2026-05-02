@@ -203,7 +203,9 @@ async def receive_complaint_message(message: Message, state: FSMContext):
         username_display = f"@{user_username}" if user_username else "لا يوجد"
         user_country = user_info.get('country', 'غير معروف') if user_info else 'غير معروف'
         
-        admin_msg = (
+       from aiogram.utils.markdown import escape_md
+       safe_text = escape_md(complaint_text)
+       admin_msg = (
             f"📝 **شكوى جديدة**\n\n"
             f"🎫 **رقم التذكرة:** `{ticket_number}`\n"
             f"👤 **الاسم:** {user_name}\n"
@@ -211,8 +213,8 @@ async def receive_complaint_message(message: Message, state: FSMContext):
             f"📝 **Username:** {username_display}\n"
             f"🗣️ **اللغة:** {lang}\n"
             f"🌍 **الدولة:** {user_country}\n"
-            f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-            f"💬 **رسالة الشكوى:**\n{complaint_text}"
+            f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"                
+            f"💬 **رسالة الشكوى:**\n{safe_text}"
         )
         
         from bot.keyboards.inline import get_ticket_admin_keyboard
