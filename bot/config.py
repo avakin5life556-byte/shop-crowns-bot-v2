@@ -1,5 +1,4 @@
 import os
-import sys
 from dotenv import load_dotenv
 import pytz
 from typing import List, Dict, Optional
@@ -38,9 +37,17 @@ def get_env_bool(key: str, default: bool = False) -> bool:
 # ========== Bot Configuration ==========
 
 BOT_TOKEN = get_env_str("BOT_TOKEN")
+
+# تشخيص وتحسين رسالة الخطأ
 if not BOT_TOKEN:
-    print("❌ ERROR: BOT_TOKEN is required! Please set it in .env file")
-    sys.exit(1)
+    print("❌ ERROR: BOT_TOKEN is missing! Please set it in .env file or Railway environment variables.")
+    raise ValueError("BOT_TOKEN is required but not provided. Cannot start the bot.")
+
+# تشخيص إضافي لطوله
+if len(BOT_TOKEN) < 40:
+    print(f"⚠️ WARNING: BOT_TOKEN seems invalid (length: {len(BOT_TOKEN)}). Expected at least 40 characters.")
+
+print(f"✅ BOT_TOKEN loaded successfully (length: {len(BOT_TOKEN)})")
 
 ADMIN_ID = get_env_int("ADMIN_ID", 1452361376, min_val=1)
 
@@ -51,6 +58,7 @@ TIMEZONE_STR = get_env_str("TIMEZONE", "Africa/Cairo")
 try:
     TIMEZONE = pytz.timezone(TIMEZONE_STR)
 except pytz.exceptions.UnknownTimeZoneError:
+    print(f"⚠️ WARNING: Unknown timezone '{TIMEZONE_STR}', falling back to 'Africa/Cairo'")
     TIMEZONE = pytz.timezone("Africa/Cairo")
     TIMEZONE_STR = "Africa/Cairo"
 
