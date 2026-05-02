@@ -1,4 +1,4 @@
-🔥 BOT IS RUNNING NOW
+print("🔥 BOT IS RUNNING NOW")
 import asyncio
 import logging
 import sys
