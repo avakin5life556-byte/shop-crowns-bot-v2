@@ -19,5 +19,7 @@ class ChangePhotoStates(StatesGroup):
 
 class PaidOrderStates(StatesGroup):
     """حالات الطلبات المدفوعة - Paid order states"""
-    SELECTING = State()
+    SELECTING_PRODUCT = State()
+    WAITING_PAYMENT = State()
+    CONFIRMING = State()
     WAITING_CONTACT = State()
