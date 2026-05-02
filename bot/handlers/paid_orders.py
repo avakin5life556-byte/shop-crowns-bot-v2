@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
+# تحويل ADMIN_ID إلى int مرة واحدة في أعلى الملف
+ADMIN_ID_INT = int(ADMIN_ID)
+
 # تعريف أزرار طلبات الشراء مع النصوص ثنائية اللغة
 PAID_ORDERS = {
     'buy_crowns': {
@@ -135,21 +138,6 @@ def safe_get_order_info(order_key: str, lang: str) -> dict:
         return {'name': 'طلب', 'type': 'طلب'}
 
 
-def safe_split_callback(callback_data: str, expected_parts: int = 3) -> list:
-    """تقسيم بيانات الكول باك بشكل آمن"""
-    try:
-        if not callback_data or not isinstance(callback_data, str):
-            return []
-        parts = callback_data.split('_')
-        if len(parts) < expected_parts:
-            logger.error(f"Invalid callback data format: {callback_data}, expected {expected_parts} parts, got {len(parts)}")
-            return []
-        return parts
-    except Exception as e:
-        logger.error(f"Error splitting callback data {callback_data}: {e}")
-        return []
-
-
 async def safe_edit_or_answer(callback: CallbackQuery, text: str, parse_mode: str = 'Markdown', **kwargs) -> None:
     """تعديل رسالة أو إرسال رسالة جديدة إذا فشل التعديل"""
     try:
@@ -266,7 +254,7 @@ async def handle_paid_order(message: Message, state: FSMContext):
     try:
         user_info = db.get_user_info(user_id)
     except Exception as e:
-        logger.error(f"Error getting user info for {user_id}: {e}")
+        logger.error(f"Error getting user info for user {user_id}: {e}")
     
     username_value = user_info.get('username') if user_info else None
     username_display = f"@{username_value}" if username_value and username_value != 'لا يوجد' else 'لا يوجد'
@@ -312,7 +300,7 @@ async def handle_paid_order(message: Message, state: FSMContext):
         temp_order_number = f"PO-{now.strftime('%Y%m%d%H%M%S')}"
         
         await message.bot.send_message(
-            ADMIN_ID,
+            ADMIN_ID_INT,
             admin_msg,
             reply_markup=get_order_admin_keyboard(temp_order_number, user_id),
             parse_mode='Markdown'
@@ -321,7 +309,7 @@ async def handle_paid_order(message: Message, state: FSMContext):
         logger.error(f"Failed to send admin notification for user {user_id}: {e}")
     
     try:
-        db.log_admin_action(ADMIN_ID, 'paid_order_request', user_id, None, f'طلب {order_type}')
+        db.log_admin_action(ADMIN_ID_INT, 'paid_order_request', user_id, None, f'طلب {order_type}')
     except Exception as e:
         logger.error(f"Failed to log admin action: {e}")
     
@@ -336,22 +324,23 @@ async def handle_paid_order_actions(callback: CallbackQuery):
         await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
         return
     
-    if callback.from_user.id != ADMIN_ID:
+    if callback.from_user.id != ADMIN_ID_INT:
         await callback.answer("⛔ غير مصرح لك بهذا الأمر", show_alert=True)
         return
     
-    parts = safe_split_callback(callback.data, 3)
-    if not parts or len(parts) < 3:
-        await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
-        return
-    
-    action = parts[0]
-    order_number = parts[1]
-    
+    # إصلاح: استخدام split('_', 2) لتقسيم callback data إلى 3 أجزاء فقط
     try:
+        parts = callback.data.split('_', 2)
+        if len(parts) < 3:
+            logger.error(f"Invalid callback data format: {callback.data}")
+            await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
+            return
+        
+        action = parts[0]
+        order_number = parts[1]
         user_id = int(parts[2])
     except (ValueError, IndexError) as e:
-        logger.error(f"Error converting user_id in callback {callback.data}: {e}")
+        logger.error(f"Error parsing callback data {callback.data}: {e}")
         await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
         return
     
@@ -382,14 +371,18 @@ async def handle_paid_order_actions(callback: CallbackQuery):
     try:
         user_info = db.get_user_info(user_id)
     except Exception as e:
-        logger.error(f"Error getting user info for {user_id}: {e}")
+        logger.error(f"Error getting user info for user {user_id}: {e}")
     
     user_name_display = user_info.get('name', f'المستخدم {user_id}') if user_info else f'المستخدم {user_id}'
+    
+    # متغير لتخزين رسالة النجاح النهائية
+    final_message = None
+    action_done = False
     
     try:
         if action == 'done':
             db.update_ticket_status(ticket_number, 'completed')
-            db.log_admin_action(ADMIN_ID, 'order_completed', user_id, order_number, f'طلب شراء')
+            db.log_admin_action(ADMIN_ID_INT, 'order_completed', user_id, order_number, f'طلب شراء')
             
             await callback.bot.send_message(
                 user_id,
@@ -397,13 +390,14 @@ async def handle_paid_order_actions(callback: CallbackQuery):
                 parse_mode='Markdown'
             )
             
-            await safe_edit_or_answer(callback, f"✅ **تم تنفيذ طلب الشراء للمستخدم {user_name_display}**")
+            final_message = f"✅ **تم تنفيذ طلب الشراء للمستخدم {user_name_display}**"
             await callback.answer("✅ تم تنفيذ الطلب")
             logger.info(f"Admin completed order {order_number} for user {user_id}")
+            action_done = True
         
         elif action == 'exec':
             db.update_ticket_status(ticket_number, 'processing')
-            db.log_admin_action(ADMIN_ID, 'order_processing', user_id, order_number, f'طلب شراء')
+            db.log_admin_action(ADMIN_ID_INT, 'order_processing', user_id, order_number, f'طلب شراء')
             
             await callback.bot.send_message(
                 user_id,
@@ -411,13 +405,14 @@ async def handle_paid_order_actions(callback: CallbackQuery):
                 parse_mode='Markdown'
             )
             
-            await safe_edit_or_answer(callback, f"🔄 **جاري تنفيذ طلب الشراء للمستخدم {user_name_display}**")
+            final_message = f"🔄 **جاري تنفيذ طلب الشراء للمستخدم {user_name_display}**"
             await callback.answer("⏳ تم بدء التنفيذ")
             logger.info(f"Admin started processing order {order_number} for user {user_id}")
+            action_done = True
         
         elif action == 'cancel':
             db.update_ticket_status(ticket_number, 'cancelled')
-            db.log_admin_action(ADMIN_ID, 'order_cancelled', user_id, order_number, f'طلب شراء')
+            db.log_admin_action(ADMIN_ID_INT, 'order_cancelled', user_id, order_number, f'طلب شراء')
             
             await callback.bot.send_message(
                 user_id,
@@ -425,30 +420,33 @@ async def handle_paid_order_actions(callback: CallbackQuery):
                 parse_mode='Markdown'
             )
             
-            await safe_edit_or_answer(callback, f"❌ **تم إلغاء طلب الشراء للمستخدم {user_name_display}**")
+            final_message = f"❌ **تم إلغاء طلب الشراء للمستخدم {user_name_display}**"
             await callback.answer("❌ تم إلغاء الطلب")
             logger.info(f"Admin cancelled order {order_number} for user {user_id}")
+            action_done = True
         
         else:
             await callback.answer("❌ إجراء غير معروف", show_alert=True)
             return
         
-        now = datetime.now(TIMEZONE)
-        status_text = {
-            'done': '✅ مكتمل',
-            'exec': '🔄 قيد التنفيذ',
-            'cancel': '❌ ملغي'
-        }
-        
-        await safe_edit_or_answer(
-            callback,
-            f"💰 **تحديث طلب شراء**\n\n"
-            f"📌 **الحالة:** {status_text[action]}\n"
-            f"👤 **المستخدم:** {user_name_display}\n"
-            f"🆔 **المعرف:** `{user_id}`\n"
-            f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}",
-            parse_mode='Markdown'
-        )
+        if action_done:
+            # تحديث واجهة الأدمن برسالة واحدة فقط
+            now = datetime.now(TIMEZONE)
+            status_text = {
+                'done': '✅ مكتمل',
+                'exec': '🔄 قيد التنفيذ',
+                'cancel': '❌ ملغي'
+            }
+            
+            await safe_edit_or_answer(
+                callback,
+                f"💰 **تحديث طلب شراء**\n\n"
+                f"📌 **الحالة:** {status_text[action]}\n"
+                f"👤 **المستخدم:** {user_name_display}\n"
+                f"🆔 **المعرف:** `{user_id}`\n"
+                f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}",
+                parse_mode='Markdown'
+            )
         
     except Exception as e:
         logger.error(f"Error in handle_paid_order_actions for {action}: {e}")
@@ -459,7 +457,7 @@ async def handle_paid_order_actions(callback: CallbackQuery):
 @router.message(F.text == "🛒 طلبات الشراء")
 async def show_paid_orders_admin_list(message: Message):
     """عرض تذاكر طلبات الشراء المفتوحة للأدمن"""
-    if message.from_user.id != ADMIN_ID:
+    if message.from_user.id != ADMIN_ID_INT:
         return
     
     try:
@@ -503,16 +501,20 @@ async def reopen_ticket(callback: CallbackQuery):
         await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
         return
     
-    if callback.from_user.id != ADMIN_ID:
+    if callback.from_user.id != ADMIN_ID_INT:
         await callback.answer("⛔ غير مصرح", show_alert=True)
         return
     
-    parts = safe_split_callback(callback.data, 2)
-    if not parts or len(parts) < 2:
+    try:
+        parts = callback.data.split('_', 1)
+        if len(parts) < 2:
+            await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
+            return
+        ticket_number = parts[1]
+    except Exception as e:
+        logger.error(f"Error parsing callback data {callback.data}: {e}")
         await callback.answer(safe_get_text('ar', 'invalid_data'), show_alert=True)
         return
-    
-    ticket_number = parts[1] if len(parts) > 1 else None
     
     if not ticket_number:
         await callback.answer("❌ رقم التذكرة غير موجود", show_alert=True)
@@ -534,4 +536,4 @@ def register_paid_orders_handlers(dp):
         dp.include_router(router)
         logger.info("تم تسجيل معالجات طلبات الشراء بنجاح")
     except Exception as e:
-        logger.error(f"Failed to register paid orders handlers: {e}")
+        logger.error("Failed to register paid orders handlers: %s", str(e) if e else "Unknown error")
