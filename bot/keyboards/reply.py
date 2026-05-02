@@ -2,13 +2,11 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from bot.utils.translations import get_user_language
 
 
-def get_main_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_main_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     القائمة الرئيسية للبوت - Main menu keyboard
-    Supports both dynamic user language and direct language parameter
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     if lang == 'ar':
         buttons = [
@@ -33,14 +31,20 @@ def get_main_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
             [KeyboardButton(text='👑 Control Panel')]
         ]
     
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر من القائمة" if lang == 'ar' else "Choose from the menu"
+    )
     return keyboard
 
 
-def get_admin_keyboard(lang: str = 'ar') -> ReplyKeyboardMarkup:
+def get_admin_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     لوحة تحكم الأدمن - Admin control panel
     """
+    lang = get_user_language(user_id)
+    
     if lang == 'ar':
         buttons = [
             [KeyboardButton(text='📊 الإحصائيات')],
@@ -72,52 +76,65 @@ def get_admin_keyboard(lang: str = 'ar') -> ReplyKeyboardMarkup:
             [KeyboardButton(text='🔙 Back')]
         ]
     
-    markup = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر إجراء" if lang == 'ar' else "Choose an action"
+    )
     return markup
 
 
-def get_back_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_back_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     زر رجوع فقط - Back button only
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     back_text = "🔙 رجوع" if lang == 'ar' else "🔙 Back"
-    keyboard = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=back_text)]], resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=back_text)]], 
+        resize_keyboard=True
+    )
     return keyboard
 
 
-def get_language_keyboard() -> ReplyKeyboardMarkup:
+def get_language_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
-    أزرار اختيار اللغة - Language selection buttons (static)
+    أزرار اختيار اللغة - Language selection buttons
     """
+    # Only static buttons, language-independent
     buttons = [
         [KeyboardButton(text="🇸🇦 العربية")],
-        [KeyboardButton(text="🇺🇸 English")]
+        [KeyboardButton(text="🇺🇸 English")],
+        [KeyboardButton(text="🔙 رجوع" if get_user_language(user_id) == 'ar' else "🔙 Back")]
     ]
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر لغتك" if get_user_language(user_id) == 'ar' else "Choose your language"
+    )
     return keyboard
 
 
-def get_cancel_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_cancel_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     زر إلغاء - Cancel button
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     cancel_text = "❌ إلغاء" if lang == 'ar' else "❌ Cancel"
-    keyboard = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=cancel_text)]], resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=cancel_text)]], 
+        resize_keyboard=True
+    )
     return keyboard
 
 
-def get_yes_no_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_yes_no_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     أزرار نعم/لا - Yes/No buttons
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     if lang == 'ar':
         yes_text = "✅ نعم"
@@ -129,14 +146,20 @@ def get_yes_no_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
     buttons = [
         [KeyboardButton(text=yes_text), KeyboardButton(text=no_text)]
     ]
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر أحد الخيارين" if lang == 'ar' else "Choose one of the options"
+    )
     return keyboard
 
 
-def get_rating_keyboard(lang: str = 'ar') -> ReplyKeyboardMarkup:
+def get_rating_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     أزرار التقييم - Rating buttons (1-5 stars)
     """
+    lang = get_user_language(user_id)
+    
     if lang == 'ar':
         buttons = [
             [KeyboardButton(text="⭐ 1")],
@@ -156,16 +179,19 @@ def get_rating_keyboard(lang: str = 'ar') -> ReplyKeyboardMarkup:
             [KeyboardButton(text="🔙 Back")]
         ]
     
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر عدد النجوم" if lang == 'ar' else "Choose number of stars"
+    )
     return keyboard
 
 
-def get_mods_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_mods_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     أزرار المودات - Mods buttons
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     if lang == 'ar':
         buttons = [
@@ -182,16 +208,19 @@ def get_mods_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
             [KeyboardButton(text='🔙 Back')]
         ]
     
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر المود الذي تريد" if lang == 'ar' else "Choose the mod you want"
+    )
     return keyboard
 
 
-def get_complaints_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_complaints_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     أزرار قسم الشكاوى - Complaints section buttons
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     if lang == 'ar':
         buttons = [
@@ -206,16 +235,19 @@ def get_complaints_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMark
             [KeyboardButton(text='🔙 Back')]
         ]
     
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر نوع التواصل" if lang == 'ar' else "Choose communication type"
+    )
     return keyboard
 
 
-def get_paid_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_paid_orders_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     أزرار طلبات الشراء - Paid orders buttons
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     if lang == 'ar':
         buttons = [
@@ -238,16 +270,19 @@ def get_paid_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMar
             [KeyboardButton(text='🔙 Back')]
         ]
     
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر الخدمة التي تريد" if lang == 'ar' else "Choose the service you want"
+    )
     return keyboard
 
 
-def get_free_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMarkup:
+def get_free_orders_keyboard(user_id: int) -> ReplyKeyboardMarkup:
     """
     أزرار الطلبات المجانية - Free orders buttons
     """
-    if lang is None:
-        lang = get_user_language(user_id)
+    lang = get_user_language(user_id)
     
     if lang == 'ar':
         buttons = [
@@ -264,14 +299,20 @@ def get_free_orders_keyboard(user_id: int, lang: str = None) -> ReplyKeyboardMar
             [KeyboardButton(text='🔙 Back')]
         ]
     
-    keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر الخدمة المجانية" if lang == 'ar' else "Choose free service"
+    )
     return keyboard
 
 
-def get_simple_keyboard(buttons: list, row_width: int = 2) -> ReplyKeyboardMarkup:
+def get_simple_keyboard(user_id: int, buttons: list, row_width: int = 2) -> ReplyKeyboardMarkup:
     """
     لوحة مفاتيح بسيطة مع أزرار مخصصة - Simple keyboard with custom buttons
     """
+    lang = get_user_language(user_id)
+    
     keyboard_buttons = []
     row = []
     for i, btn in enumerate(buttons):
@@ -280,5 +321,9 @@ def get_simple_keyboard(buttons: list, row_width: int = 2) -> ReplyKeyboardMarku
             keyboard_buttons.append(row)
             row = []
     
-    keyboard = ReplyKeyboardMarkup(keyboard=keyboard_buttons, resize_keyboard=True)
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=keyboard_buttons, 
+        resize_keyboard=True,
+        input_field_placeholder="اختر من القائمة" if lang == 'ar' else "Choose from the menu"
+    )
     return keyboard
