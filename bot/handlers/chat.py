@@ -3,11 +3,14 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 import asyncio
-import pytz
-from bot.database import db
+import logging
+from bot.database.db import db  # تصحيح المسار
 from bot.keyboards.inline import get_live_chat_keyboard, get_end_chat_keyboard, get_admin_chat_keyboard
 from bot.states.chat_states import ChatStates
 from bot.config import ADMIN_ID, TIMEZONE, CHAT_TIMEOUT_MINUTES
+
+# إعداد logging
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -19,30 +22,36 @@ async def start_chat_timeout(chat_session_id: int, user_id: int, bot):
     """بدء مؤقت للمحادثة (20 دقيقة)"""
     
     async def timeout_callback():
-        if chat_session_id in active_timeouts:
-            # الحصول على معلومات الجلسة
-            session = db.get_chat_session(chat_session_id)
-            if session and session['status'] == 'active':
-                # تحديث حالة التذكرة
-                db.update_ticket_status(session['ticket_number'], 'timeout')
-                
-                # إرسال رسالة للمستخدم
-                lang = db.get_user_language(user_id)
-                timeout_msg = "⏰ **لم يتم قبول طلبك حالياً بسبب ضغط الطلبات**" if lang == 'ar' else "⏰ **Your request has timed out due to high load**"
-                await bot.send_message(user_id, timeout_msg, parse_mode='Markdown')
-                
-                # إغلاق الجلسة
-                db.close_chat_session(chat_session_id)
-                
-                # إشعار الأدمن
-                await bot.send_message(
-                    ADMIN_ID,
-                    f"⏰ **انتهت مهلة المحادثة**\n👤 المستخدم: {user_id}\n📅 {datetime.now(TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}",
-                    parse_mode='Markdown'
-                )
-                
-                # حذف المؤقت
-                del active_timeouts[chat_session_id]
+        try:
+            if chat_session_id in active_timeouts:
+                # الحصول على معلومات الجلسة
+                session = db.get_chat_session(chat_session_id)
+                if session and session.get('status') == 'active':
+                    # الحصول على رقم التذكرة
+                    ticket = db.get_ticket_by_id(session.get('ticket_id'))
+                    if ticket:
+                        # تحديث حالة التذكرة
+                        db.update_ticket_status(ticket['ticket_number'], 'closed')
+                    
+                    # إرسال رسالة للمستخدم
+                    lang = db.get_user_language(user_id)
+                    timeout_msg = "⏰ **لم يتم قبول طلبك حالياً بسبب ضغط الطلبات**" if lang == 'ar' else "⏰ **Your request has timed out due to high load**"
+                    await bot.send_message(user_id, timeout_msg, parse_mode='Markdown')
+                    
+                    # إغلاق الجلسة
+                    db.close_chat_session(chat_session_id)
+                    
+                    # إشعار الأدمن
+                    await bot.send_message(
+                        ADMIN_ID,
+                        f"⏰ **انتهت مهلة المحادثة**\n👤 المستخدم: {user_id}\n📅 {datetime.now(TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}",
+                        parse_mode='Markdown'
+                    )
+                    
+                    # حذف المؤقت
+                    del active_timeouts[chat_session_id]
+        except Exception as e:
+            logger.error(f"Error in timeout_callback for session {chat_session_id}: {e}")
     
     # تخزين المؤقت
     task = asyncio.create_task(timeout_callback())
@@ -56,8 +65,12 @@ async def start_chat_timeout(chat_session_id: int, user_id: int, bot):
 async def cancel_chat_timeout(chat_session_id: int):
     """إلغاء مؤقت المحادثة"""
     if chat_session_id in active_timeouts:
-        active_timeouts[chat_session_id]['task'].cancel()
-        del active_timeouts[chat_session_id]
+        try:
+            active_timeouts[chat_session_id]['task'].cancel()
+        except Exception as e:
+            logger.error(f"Error cancelling timeout for session {chat_session_id}: {e}")
+        finally:
+            del active_timeouts[chat_session_id]
 
 
 # ========== فتح محادثة جديدة ==========
@@ -74,10 +87,20 @@ async def open_chat(callback: CallbackQuery, state: FSMContext):
         return
     
     # إنشاء تذكرة جديدة
-    ticket_number, ticket_id = db.create_ticket(user_id, 'live_chat', 'فتح محادثة دعم مباشر')
+    ticket_data = db.create_ticket(user_id, 'live_chat', 'فتح محادثة دعم مباشر')
+    
+    if not ticket_data or not ticket_data[0] or not ticket_data[1]:
+        await callback.answer("❌ حدث خطأ أثناء فتح المحادثة", show_alert=True)
+        return
+    
+    ticket_number, ticket_id = ticket_data
     
     # إنشاء جلسة محادثة
     session_id = db.create_chat_session(user_id, None, ticket_id)
+    
+    if not session_id:
+        await callback.answer("❌ حدث خطأ أثناء فتح المحادثة", show_alert=True)
+        return
     
     # بدء المؤقت
     await start_chat_timeout(session_id, user_id, callback.bot)
@@ -95,7 +118,7 @@ async def open_chat(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         "🔓 **تم فتح محادثة مع الدعم الفني**\n\n"
         "✅ يمكنك كتابة رسالتك الآن\n"
-        "⏰ المهلة: 20 دقيقة\n"
+        f"⏰ المهلة: {CHAT_TIMEOUT_MINUTES} دقيقة\n"
         "🔚 اضغط على زر إنهاء المحادثة عند الانتهاء",
         reply_markup=get_live_chat_keyboard(lang),
         parse_mode='Markdown'
@@ -142,8 +165,9 @@ async def handle_user_message(message: Message, state: FSMContext):
     await cancel_chat_timeout(chat_session_id)
     await start_chat_timeout(chat_session_id, user_id, message.bot)
     
-    # حفظ رسالة المستخدم
-    db.add_ticket_message(ticket_id, user_id, message.text)
+    # حفظ رسالة المستخدم (مع التحقق من None)
+    message_text = message.text if message.text else "⚠️ المستخدم أرسل محتوى غير نصي"
+    db.add_ticket_message(ticket_id, user_id, message_text)
     
     # إرسال للمستخدم تأكيد
     await message.answer("✅ **تم إرسال رسالتك إلى الدعم**", parse_mode='Markdown')
@@ -152,7 +176,7 @@ async def handle_user_message(message: Message, state: FSMContext):
     admin_msg = (
         f"💬 **رسالة جديدة من المستخدم**\n\n"
         f"🆔 **المعرف:** {user_id}\n"
-        f"💬 **الرسالة:**\n{message.text}\n\n"
+        f"💬 **الرسالة:**\n{message_text}\n\n"
         f"⏰ {datetime.now(TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}"
     )
     
@@ -174,8 +198,18 @@ async def admin_reply_start(callback: CallbackQuery, state: FSMContext):
         return
     
     parts = callback.data.split('_')
-    user_id = int(parts[2])
-    ticket_id = int(parts[3])
+    
+    if len(parts) < 4:
+        await callback.answer("❌ بيانات غير صالحة", show_alert=True)
+        return
+    
+    try:
+        user_id = int(parts[2])
+        ticket_id = int(parts[3])
+    except (ValueError, IndexError) as e:
+        logger.error(f"Error parsing admin_reply callback: {callback.data} - {e}")
+        await callback.answer("❌ حدث خطأ", show_alert=True)
+        return
     
     await state.update_data(
         reply_to_user=user_id,
@@ -202,26 +236,31 @@ async def send_admin_reply(message: Message, state: FSMContext):
         await state.clear()
         return
     
-    # حفظ رسالة الأدمن
-    db.add_ticket_message(ticket_id, ADMIN_ID, message.text)
+    # حفظ رسالة الأدمن (مع التحقق من None)
+    message_text = message.text if message.text else "⚠️ الأدمن أرسل محتوى غير نصي"
+    db.add_ticket_message(ticket_id, ADMIN_ID, message_text)
     
     # إرسال الرد للمستخدم
     lang = db.get_user_language(user_id)
     
-    await message.bot.send_message(
-        user_id,
-        f"📨 **رد من الدعم الفني:**\n\n{message.text}",
-        reply_markup=get_live_chat_keyboard(lang),
-        parse_mode='Markdown'
-    )
-    
-    await message.answer(f"✅ **تم إرسال الرد للمستخدم {user_id}**", parse_mode='Markdown')
-    
-    # تحديث المؤقت للمستخدم (عند الرد، يتم تحديث المهلة)
-    chat_session = db.get_active_chat(user_id)
-    if chat_session:
-        await cancel_chat_timeout(chat_session['id'])
-        await start_chat_timeout(chat_session['id'], user_id, message.bot)
+    try:
+        await message.bot.send_message(
+            user_id,
+            f"📨 **رد من الدعم الفني:**\n\n{message_text}",
+            reply_markup=get_live_chat_keyboard(lang),
+            parse_mode='Markdown'
+        )
+        
+        await message.answer(f"✅ **تم إرسال الرد للمستخدم {user_id}**", parse_mode='Markdown')
+        
+        # تحديث المؤقت للمستخدم (عند الرد، يتم تحديث المهلة)
+        chat_session = db.get_active_chat(user_id)
+        if chat_session and chat_session.get('id'):
+            await cancel_chat_timeout(chat_session['id'])
+            await start_chat_timeout(chat_session['id'], user_id, message.bot)
+    except Exception as e:
+        logger.error(f"Error sending admin reply to {user_id}: {e}")
+        await message.answer(f"❌ فشل إرسال الرد: {e}", parse_mode='Markdown')
     
     await state.clear()
 
@@ -236,7 +275,7 @@ async def end_chat_user(callback: CallbackQuery, state: FSMContext):
     # الحصول على الجلسة النشطة
     chat_session = db.get_active_chat(user_id)
     
-    if chat_session:
+    if chat_session and chat_session.get('id'):
         # إلغاء المؤقت
         await cancel_chat_timeout(chat_session['id'])
         
@@ -244,7 +283,8 @@ async def end_chat_user(callback: CallbackQuery, state: FSMContext):
         db.close_chat_session(chat_session['id'])
         
         # تحديث حالة التذكرة
-        db.update_ticket_status(chat_session['ticket_number'], 'closed')
+        if chat_session.get('ticket_number'):
+            db.update_ticket_status(chat_session['ticket_number'], 'closed')
         
         # إشعار الأدمن
         await callback.bot.send_message(
@@ -263,7 +303,7 @@ async def end_chat_user(callback: CallbackQuery, state: FSMContext):
     )
     
     # إظهار القائمة الرئيسية
-    from keyboards.reply import get_main_keyboard
+    from bot.keyboards.reply import get_main_keyboard
     await callback.message.answer(
         "اهلاً بك في متجر Shop Crowns 🎉🎁\nاختر من القائمة 👇",
         reply_markup=get_main_keyboard(lang)
@@ -281,8 +321,18 @@ async def admin_end_chat(callback: CallbackQuery, state: FSMContext):
         return
     
     parts = callback.data.split('_')
-    user_id = int(parts[3])
-    chat_session_id = int(parts[4])
+    
+    if len(parts) < 5:
+        await callback.answer("❌ بيانات غير صالحة", show_alert=True)
+        return
+    
+    try:
+        user_id = int(parts[3])
+        chat_session_id = int(parts[4])
+    except (ValueError, IndexError) as e:
+        logger.error(f"Error parsing admin_end_chat callback: {callback.data} - {e}")
+        await callback.answer("❌ حدث خطأ", show_alert=True)
+        return
     
     lang = db.get_user_language(user_id)
     
@@ -293,19 +343,22 @@ async def admin_end_chat(callback: CallbackQuery, state: FSMContext):
     db.close_chat_session(chat_session_id)
     
     # إرسال رسالة شكر للمستخدم
-    await callback.bot.send_message(
-        user_id,
-        "🙏 **تم إنهاء المحادثة من قبل الدعم**\n\nشكراً لتواصلك معنا\nلا تتردد في الاتصال بنا مرة أخرى",
-        parse_mode='Markdown'
-    )
-    
-    # إظهار القائمة الرئيسية للمستخدم
-    from keyboards.reply import get_main_keyboard
-    await callback.bot.send_message(
-        user_id,
-        "اهلاً بك في متجر Shop Crowns 🎉🎁\nاختر من القائمة 👇",
-        reply_markup=get_main_keyboard(lang)
-    )
+    try:
+        await callback.bot.send_message(
+            user_id,
+            "🙏 **تم إنهاء المحادثة من قبل الدعم**\n\nشكراً لتواصلك معنا\nلا تتردد في الاتصال بنا مرة أخرى",
+            parse_mode='Markdown'
+        )
+        
+        # إظهار القائمة الرئيسية للمستخدم
+        from bot.keyboards.reply import get_main_keyboard
+        await callback.bot.send_message(
+            user_id,
+            "اهلاً بك في متجر Shop Crowns 🎉🎁\nاختر من القائمة 👇",
+            reply_markup=get_main_keyboard(lang)
+        )
+    except Exception as e:
+        logger.error(f"Error sending end chat message to user {user_id}: {e}")
     
     await callback.message.edit_text(f"✅ **تم إنهاء المحادثة مع المستخدم {user_id}**", parse_mode='Markdown')
     await callback.answer()
@@ -320,23 +373,24 @@ async def check_timeouts_periodically():
             expired = []
             
             for session_id, data in active_timeouts.items():
-                if now >= data['expires_at']:
+                if now >= data.get('expires_at', now):
                     expired.append(session_id)
             
             for session_id in expired:
                 if session_id in active_timeouts:
                     # تنفيذ timeout
-                    task = active_timeouts[session_id]['task']
-                    if not task.done():
+                    task = active_timeouts[session_id].get('task')
+                    if task and not task.done():
                         # سيتم تنفيذ timeout_callback
                         pass
             
             await asyncio.sleep(60)  # التحقق كل دقيقة
         except Exception as e:
-            print(f"Timeout check error: {e}")
+            logger.error(f"Timeout check error: {e}")
             await asyncio.sleep(60)
 
 
 def register_chat_handlers(dp):
     """تسجيل معالجات الدردشة"""
     dp.include_router(router)
+    logger.info("تم تسجيل معالجات الدردشة بنجاح")
