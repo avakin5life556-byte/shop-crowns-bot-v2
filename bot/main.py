@@ -33,7 +33,7 @@ logging.basicConfig(
     format=LOG_FORMAT,
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('bot.log')
+        
     ]
 )
 logger = logging.getLogger(__name__)
