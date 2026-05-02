@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, Any
 from bot.database.db import db
 
 # ========== النظام القديم (الكامل) ==========
@@ -171,6 +171,19 @@ def get_user_language(user_id: int) -> str:
         return "ar"
 
 
+def _get_nested_value(data: Any, keys: List[str], default: Any = None) -> Any:
+    """استخراج قيمة متداخلة من قاموس بشكل آمن"""
+    current = data
+    for key in keys:
+        if isinstance(current, dict):
+            current = current.get(key)
+            if current is None:
+                return default
+        else:
+            return default
+    return current if current is not None else default
+
+
 def get_text(user_id: int, key: str, lang: Optional[str] = None, **kwargs) -> str:
     """
     Get translated text by key for user (النظام القديم - الكامل)
@@ -184,29 +197,32 @@ def get_text(user_id: int, key: str, lang: Optional[str] = None, **kwargs) -> st
     Returns:
         Translated string
     """
-    language = lang if lang else get_user_language(user_id)
-    
-    if language not in TRANSLATIONS:
-        language = "ar"
-    
-    parts = key.split('.')
-    current = TRANSLATIONS[language]
-    
-    for part in parts:
-        if isinstance(current, dict):
-            current = current.get(part, TRANSLATIONS["ar"].get(part, part))
-        else:
-            break
-    
-    text = str(current) if not isinstance(current, dict) else str(current)
-    
-    if kwargs:
-        try:
-            text = text.format(**kwargs)
-        except Exception:
-            pass
-    
-    return text
+    try:
+        language = lang if lang else get_user_language(user_id)
+        
+        if language not in TRANSLATIONS:
+            language = "ar"
+        
+        parts = key.split('.')
+        text = _get_nested_value(TRANSLATIONS[language], parts, None)
+        
+        if text is None:
+            # Fallback للعربية
+            text = _get_nested_value(TRANSLATIONS["ar"], parts, key)
+        
+        if not isinstance(text, str):
+            text = str(text) if text is not None else key
+        
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except (KeyError, ValueError, AttributeError):
+                pass
+        
+        return text
+        
+    except Exception:
+        return key
 
 
 def get_simple_text(user_id: int, key: str, **kwargs) -> str:
@@ -214,34 +230,53 @@ def get_simple_text(user_id: int, key: str, **kwargs) -> str:
     Get translated text from the new simplified system
     (للتوافق مع الكود الجديد - يستخدم النظام المبسط)
     """
-    lang = get_user_language(user_id)
-    if lang not in NEW_TRANSLATIONS:
-        lang = "ar"
-    
-    text = NEW_TRANSLATIONS[lang].get(key, key)
-    
-    if kwargs:
-        try:
-            text = text.format(**kwargs)
-        except Exception:
-            pass
-    
-    return text
+    try:
+        lang = get_user_language(user_id)
+        if lang not in NEW_TRANSLATIONS:
+            lang = "ar"
+        
+        text = NEW_TRANSLATIONS[lang].get(key, key)
+        
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except (KeyError, ValueError, AttributeError):
+                pass
+        
+        return text
+        
+    except Exception:
+        return key
 
 
 def get_main_menu_buttons(lang: str = "ar") -> List[List[str]]:
     """Get main menu buttons for language"""
-    return TRANSLATIONS.get(lang, TRANSLATIONS["ar"])["main_menu"]["buttons"]
+    try:
+        if lang not in TRANSLATIONS:
+            lang = "ar"
+        return TRANSLATIONS[lang]["main_menu"]["buttons"]
+    except (KeyError, TypeError):
+        return TRANSLATIONS["ar"]["main_menu"]["buttons"]
 
 
 def get_admin_menu_buttons(lang: str = "ar") -> List[List[str]]:
     """Get admin menu buttons for language"""
-    return TRANSLATIONS.get(lang, TRANSLATIONS["ar"])["admin_menu"]["buttons"]
+    try:
+        if lang not in TRANSLATIONS:
+            lang = "ar"
+        return TRANSLATIONS[lang]["admin_menu"]["buttons"]
+    except (KeyError, TypeError):
+        return TRANSLATIONS["ar"]["admin_menu"]["buttons"]
 
 
 def get_menu_title(lang: str = "ar", menu: str = "main_menu") -> str:
     """Get menu title for language"""
-    return TRANSLATIONS.get(lang, TRANSLATIONS["ar"])[menu]["title"]
+    try:
+        if lang not in TRANSLATIONS:
+            lang = "ar"
+        return TRANSLATIONS[lang][menu]["title"]
+    except (KeyError, TypeError):
+        return TRANSLATIONS["ar"][menu]["title"]
 
 
 def get_supported_languages() -> List[str]:
@@ -252,8 +287,14 @@ def get_supported_languages() -> List[str]:
 # ========== دوال مساعدة إضافية ==========
 
 def get_language_name(lang: str) -> str:
+    """Get language name in its own language"""
     languages = {
         "ar": "العربية",
         "en": "English"
     }
     return languages.get(lang, lang)
+
+
+def get_and_format_text(user_id: int, key: str, **kwargs) -> str:
+    """Alias for get_text with format"""
+    return get_text(user_id, key, **kwargs)
