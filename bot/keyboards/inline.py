@@ -62,7 +62,7 @@ def get_admin_chat_keyboard(user_id: int, chat_session_id: int) -> InlineKeyboar
     """Admin chat control keyboard (updated version with complaint handlers)"""
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
-        InlineKeyboardButton(text="💬 رد", callback_data=f"admin_reply_complaint_{user_id}"),
+        InlineKeyboardButton(text="💬 رد", callback_data=f"admin_reply_complaint_{user_id}_{chat_session_id}"),
         InlineKeyboardButton(text="🔚 إنهاء", callback_data=f"admin_end_chat_complaint_{user_id}_{chat_session_id}")
     )
     return markup
@@ -122,14 +122,14 @@ def get_mods_keyboard(lang: str = 'ar') -> InlineKeyboardMarkup:
         buttons = [
             InlineKeyboardButton(text="☁️ Sky Mod", callback_data="mod_sky"),
             InlineKeyboardButton(text="🐂 Bull Mod", callback_data="mod_bull"),
-            InlineKeyboardButton(text="👑 Gold Mod", callback_data="mod_gold"),
+            InlineKeyboardButton(text="⭐ Gold Mod", callback_data="mod_gold"),
             InlineKeyboardButton(text="🔙 رجوع", callback_data="back_main")
         ]
     else:
         buttons = [
             InlineKeyboardButton(text="☁️ Sky Mod", callback_data="mod_sky"),
             InlineKeyboardButton(text="🐂 Bull Mod", callback_data="mod_bull"),
-            InlineKeyboardButton(text="👑 Gold Mod", callback_data="mod_gold"),
+            InlineKeyboardButton(text="⭐ Gold Mod", callback_data="mod_gold"),
             InlineKeyboardButton(text="🔙 Back", callback_data="back_main")
         ]
     
@@ -179,6 +179,7 @@ def get_paid_orders_keyboard(lang: str = 'ar') -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🔙 رجوع" if lang == 'ar' else "🔙 Back", callback_data="back_main")
     ]
 
+    # إضافة الأزرار في صفوف
     for i in range(0, len(buttons) - 1, 2):
         markup.row(buttons[i], buttons[i + 1])
     if len(buttons) % 2 == 1:
@@ -221,6 +222,17 @@ def get_admin_reply_keyboard(user_id: int, ticket_id: int) -> InlineKeyboardMark
     return markup
 
 
+def get_ticket_admin_keyboard(ticket_number: str, user_id: int) -> InlineKeyboardMarkup:
+    """Admin ticket control keyboard (merged version)"""
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(text="💬 رد على التذكرة", callback_data=f"reply_ticket_{ticket_number}"),
+        InlineKeyboardButton(text="🔓 فتح شات مباشر", callback_data=f"open_chat_{ticket_number}_{user_id}"),
+        InlineKeyboardButton(text="✅ إغلاق التذكرة", callback_data=f"close_ticket_{ticket_number}")
+    )
+    return markup
+
+
 # ========= أزرار الأدمن (Admin) =========
 
 def get_order_admin_keyboard(order_number: str, user_id: int) -> InlineKeyboardMarkup:
@@ -250,17 +262,6 @@ def get_confirmation_keyboard() -> InlineKeyboardMarkup:
     return markup
 
 
-def get_ticket_admin_keyboard(ticket_number: str, user_id: int) -> InlineKeyboardMarkup:
-    """Admin ticket control keyboard (merged version)"""
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        InlineKeyboardButton(text="💬 رد على التذكرة", callback_data=f"reply_ticket_{ticket_number}"),
-        InlineKeyboardButton(text="🔓 فتح شات مباشر", callback_data=f"open_chat_{ticket_number}_{user_id}"),
-        InlineKeyboardButton(text="✅ إغلاق التذكرة", callback_data=f"close_ticket_{ticket_number}")
-    )
-    return markup
-
-
 def get_broadcast_confirmation_keyboard() -> InlineKeyboardMarkup:
     """Broadcast confirmation keyboard"""
     markup = InlineKeyboardMarkup(row_width=2)
@@ -271,33 +272,59 @@ def get_broadcast_confirmation_keyboard() -> InlineKeyboardMarkup:
     return markup
 
 
-# ========= قائمة رئيسية إنلاين (Inline Main Menu) - جديدة =========
+# ========= إعدادات (Settings) =========
 
-def get_main_keyboard_inline(lang: str = 'ar') -> InlineKeyboardMarkup:
-    """Inline main menu keyboard (uses TRANSLATIONS)"""
-    from bot.utils.translations import TRANSLATIONS
+def get_settings_keyboard(lang: str = 'ar') -> InlineKeyboardMarkup:
+    """Settings keyboard"""
+    markup = InlineKeyboardMarkup(row_width=1)
     
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        InlineKeyboardButton(text=TRANSLATIONS[lang]['mods'], callback_data="mods"),
-        InlineKeyboardButton(text=TRANSLATIONS[lang]['paid_orders'], callback_data="paid_orders"),
-        InlineKeyboardButton(text=TRANSLATIONS[lang]['free_orders'], callback_data="free_orders"),
-        InlineKeyboardButton(text=TRANSLATIONS[lang]['complaints'], callback_data="complaints"),
-        InlineKeyboardButton(text=TRANSLATIONS[lang]['rate_bot'], callback_data="rate_bot"),
-        InlineKeyboardButton(text=TRANSLATIONS[lang]['change_lang'], callback_data="change_lang")
-    )
-    markup.add(InlineKeyboardButton(text=TRANSLATIONS[lang]['back'], callback_data="back_main"))
+    if lang == 'ar':
+        markup.add(
+            InlineKeyboardButton(text="🌍 تغيير اللغة", callback_data="change_lang"),
+            InlineKeyboardButton(text="🔙 رجوع", callback_data="back_main")
+        )
+    else:
+        markup.add(
+            InlineKeyboardButton(text="🌍 Change Language", callback_data="change_lang"),
+            InlineKeyboardButton(text="🔙 Back", callback_data="back_main")
+        )
+    
     return markup
 
 
-# ========= New Back Keyboard =========
+# ========= قائمة رئيسية إنلاين (Inline Main Menu) =========
+
+def get_main_keyboard_inline(lang: str = 'ar') -> InlineKeyboardMarkup:
+    """Inline main menu keyboard"""
+    markup = InlineKeyboardMarkup(row_width=2)
+    
+    if lang == 'ar':
+        markup.add(
+            InlineKeyboardButton(text="📦 المودات", callback_data="mods"),
+            InlineKeyboardButton(text="💰 طلبات الشراء", callback_data="paid_orders"),
+            InlineKeyboardButton(text="🎁 الطلبات المجانية", callback_data="free_orders"),
+            InlineKeyboardButton(text="📝 الشكاوى", callback_data="complaints"),
+            InlineKeyboardButton(text="⭐ تقييم البوت", callback_data="rate_bot"),
+            InlineKeyboardButton(text="⚙️ الإعدادات", callback_data="settings")
+        )
+    else:
+        markup.add(
+            InlineKeyboardButton(text="📦 Mods", callback_data="mods"),
+            InlineKeyboardButton(text="💰 Purchase", callback_data="paid_orders"),
+            InlineKeyboardButton(text="🎁 Free Requests", callback_data="free_orders"),
+            InlineKeyboardButton(text="📝 Complaints", callback_data="complaints"),
+            InlineKeyboardButton(text="⭐ Rate Bot", callback_data="rate_bot"),
+            InlineKeyboardButton(text="⚙️ Settings", callback_data="settings")
+        )
+    
+    return markup
+
+
+# ========= رجوع (Back) =========
 
 def get_back_keyboard(lang: str = "ar") -> InlineKeyboardMarkup:
-    text = "رجوع" if lang == "ar" else "Back"
-
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(
-        InlineKeyboardButton(text=text, callback_data="back")
-    )
-
+    """Back keyboard for navigation"""
+    text = "🔙 رجوع" if lang == "ar" else "🔙 Back"
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    keyboard.add(InlineKeyboardButton(text=text, callback_data="back"))
     return keyboard
