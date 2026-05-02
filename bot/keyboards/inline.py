@@ -5,8 +5,17 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 def get_yes_no_keyboard() -> InlineKeyboardMarkup:
     """Yes/No inline keyboard"""
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+def get_complaints_keyboard(lang):
+    kb = InlineKeyboardBuilder()
+
+    kb.button(text="📩 شكوى", callback_data="complaint_send")
+    kb.button(text="🔙 رجوع", callback_data="back")
+
+    kb.adjust(1)
+
+    return kb.as_markup()
         InlineKeyboardButton(text="✅ نعم", callback_data="yes"),
         InlineKeyboardButton(text="❌ لا", callback_data="no")
     )
@@ -15,8 +24,17 @@ def get_yes_no_keyboard() -> InlineKeyboardMarkup:
 
 def get_continue_keyboard() -> InlineKeyboardMarkup:
     """Confirmation continue keyboard"""
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+def get_complaints_keyboard(lang):
+    kb = InlineKeyboardBuilder()
+
+    kb.button(text="📩 شكوى", callback_data="complaint_send")
+    kb.button(text="🔙 رجوع", callback_data="back")
+
+    kb.adjust(1)
+
+    return kb.as_markup()
         InlineKeyboardButton(text="✅ نعم", callback_data="continue_yes"),
         InlineKeyboardButton(text="❌ لا", callback_data="continue_no")
     )
@@ -104,8 +122,17 @@ def get_cancel_keyboard(lang: str = 'ar') -> InlineKeyboardMarkup:
 
 def get_language_keyboard() -> InlineKeyboardMarkup:
     """Language selection keyboard"""
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+def get_complaints_keyboard(lang):
+    kb = InlineKeyboardBuilder()
+
+    kb.button(text="📩 شكوى", callback_data="complaint_send")
+    kb.button(text="🔙 رجوع", callback_data="back")
+
+    kb.adjust(1)
+
+    return kb.as_markup()
         InlineKeyboardButton(text="🇸🇦 العربية", callback_data="lang_ar"),
         InlineKeyboardButton(text="🇺🇸 English", callback_data="lang_en")
     )
@@ -237,8 +264,17 @@ def get_ticket_admin_keyboard(ticket_number: str, user_id: int) -> InlineKeyboar
 
 def get_order_admin_keyboard(order_number: str, user_id: int) -> InlineKeyboardMarkup:
     """Admin order control keyboard"""
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+def get_complaints_keyboard(lang):
+    kb = InlineKeyboardBuilder()
+
+    kb.button(text="📩 شكوى", callback_data="complaint_send")
+    kb.button(text="🔙 رجوع", callback_data="back")
+
+    kb.adjust(1)
+
+    return kb.as_markup()
         InlineKeyboardButton(text="⏳ جاري التنفيذ", callback_data=f"exec_{order_number}_{user_id}"),
         InlineKeyboardButton(text="✅ تم التنفيذ", callback_data=f"done_{order_number}_{user_id}")
     )
