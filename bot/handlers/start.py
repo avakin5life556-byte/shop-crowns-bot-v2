@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from datetime import datetime
 import logging
+
 from bot.database.db import db
 from bot.keyboards.reply import get_main_keyboard, get_admin_keyboard
 from bot.keyboards.inline import get_language_keyboard
@@ -78,48 +79,48 @@ def safe_split_callback(callback_data: str) -> tuple:
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
-    """Handle /start command"""
+    """Handle /start command - تسجيل المستخدم وعرض القائمة الرئيسية"""
     try:
         user_id = message.from_user.id
         full_name = message.from_user.full_name or "مستخدم"
         username = message.from_user.username or ""
         language_code = message.from_user.language_code or "ar"
-        
+
         logger.info(f"✅ /start received from user {user_id}")
-        
+
         # التحقق من الحظر
         if db.is_user_banned(user_id):
             await message.answer(safe_get_text(user_id, "messages.banned"), parse_mode='Markdown')
             return
-        
-        # تسجيل المستخدم
+
+        # تسجيل المستخدم في قاعدة البيانات
         try:
             db.register_user(user_id, full_name, username, language_code)
             db.update_last_active(user_id)
         except Exception as e:
             logger.error(f"Error registering user {user_id}: {e}")
-        
-        # مسح الحالة
+
+        # مسح أي حالة FSM سابقة
         await state.clear()
-        
-        # إرسال رسالة الترحيب
-        welcome_text = safe_get_text(user_id, "messages.welcome_new")
-        
-        # الحصول على اللغة للمستخدم للكيبورد
+
+        # الحصول على لغة المستخدم
         lang = db.get_user_language(user_id)
-        
+
+        # رسالة الترحيب
+        welcome_text = safe_get_text(user_id, "messages.welcome_new")
+
+        # إرسال رسالة الترحيب مع القائمة الرئيسية
         await message.answer(
             welcome_text,
             reply_markup=get_main_keyboard(lang),
             parse_mode='Markdown'
         )
-        
-        # إشعار الأدمن
+
+        # إشعار الأدمن بمستخدم جديد
         try:
             stats = db.get_stats()
             total_users = stats.get('active', 0) + stats.get('banned', 0)
-            now = datetime.now(TIMEZONE)
-            
+
             admin_msg = safe_get_text(
                 user_id,
                 "messages.new_user_notification",
@@ -130,10 +131,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
                 total_users=total_users
             )
             await message.bot.send_message(ADMIN_ID, admin_msg, parse_mode='Markdown')
+            
+            # تسجيل الإجراء في سجل الأدمن
             db.log_admin_action(ADMIN_ID, 'user_registered', user_id, None, f'New user: {full_name}')
+            
         except Exception as e:
-            logger.error(f"Error sending admin notification for user {user_id}: {e}")
-        
+            logger.error(f"Failed to send admin notification for user {user_id}: {e}")
+
         logger.info(f"✅ /start processed successfully for user {user_id}")
         
     except Exception as e:
@@ -143,16 +147,26 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
-    """Handler for /admin command"""
+    """Handler for /admin command - لوحة تحكم الأدمن"""
     try:
         user_id = message.from_user.id
+        
+        # التحقق من صلاحيات الأدمن
         if user_id != ADMIN_ID:
             await message.answer(safe_get_text(user_id, "messages.error"), parse_mode='Markdown')
             return
         
+        # التحقق من الحظر (حتى للأدمن احتياطياً)
+        if db.is_user_banned(user_id):
+            await message.answer(safe_get_text(user_id, "messages.banned"), parse_mode='Markdown')
+            return
+        
         lang = db.get_user_language(user_id)
+        
+        admin_title = safe_get_text(user_id, "admin_menu.title")
+        
         await message.answer(
-            safe_get_text(user_id, "admin_menu.title"),
+            admin_title,
             reply_markup=get_admin_keyboard(lang),
             parse_mode='Markdown'
         )
@@ -164,15 +178,19 @@ async def cmd_admin(message: types.Message):
 @router.message(Command("language"))
 @router.message(Command("lang"))
 async def cmd_language(message: types.Message):
-    """Handler for /language command - توجيه إلى واجهة تغيير اللغة"""
+    """Handler for /language command - عرض قائمة تغيير اللغة"""
     try:
         user_id = message.from_user.id
+        
+        # التحقق من الحظر
         if db.is_user_banned(user_id):
             await message.answer(safe_get_text(user_id, "messages.banned"), parse_mode='Markdown')
             return
         
+        choose_lang_text = safe_get_text(user_id, "messages.choose_language")
+        
         await message.answer(
-            safe_get_text(user_id, "messages.choose_language"),
+            choose_lang_text,
             reply_markup=get_language_keyboard(),
             parse_mode='Markdown'
         )
@@ -181,83 +199,9 @@ async def cmd_language(message: types.Message):
         await message.answer("❌ حدث خطأ", parse_mode='Markdown')
 
 
-@router.message(lambda m: m.text in ["🌍 تغيير اللغة", "🌍 Change Language"])
-async def change_language_button(message: types.Message):
-    """Handler for language change button - توجيه إلى واجهة تغيير اللغة"""
-    try:
-        user_id = message.from_user.id
-        if db.is_user_banned(user_id):
-            await message.answer(safe_get_text(user_id, "messages.banned"), parse_mode='Markdown')
-            return
-        
-        await message.answer(
-            safe_get_text(user_id, "messages.choose_language"),
-            reply_markup=get_language_keyboard(),
-            parse_mode='Markdown'
-        )
-    except Exception as e:
-        logger.error(f"Error in change_language_button: {e}")
-        await message.answer("❌ حدث خطأ", parse_mode='Markdown')
-
-
-@router.callback_query(lambda c: c.data and c.data.startswith("lang_"))
-async def set_language(callback: types.CallbackQuery, state: FSMContext):
-    """Handler for setting user language"""
-    try:
-        user_id = callback.from_user.id
-        
-        # التحقق من الحظر
-        if db.is_user_banned(user_id):
-            await callback.answer(safe_get_text(user_id, "messages.banned"), show_alert=True)
-            return
-        
-        # استخراج اللغة بشكل آمن
-        prefix, new_lang = safe_split_callback(callback.data)
-        if not new_lang:
-            await callback.answer("❌ بيانات غير صالحة", show_alert=True)
-            return
-        
-        # التحقق من أن اللغة مدعومة
-        if new_lang not in SUPPORTED_LANGUAGES:
-            logger.warning(f"Unsupported language {new_lang} requested by user {user_id}")
-            new_lang = 'ar'
-        
-        # تحديث اللغة
-        try:
-            db.set_user_language(user_id, new_lang)
-            db.update_last_active(user_id)
-        except Exception as e:
-            logger.error(f"Error setting language for user {user_id}: {e}")
-            await callback.answer("❌ فشل تغيير اللغة", show_alert=True)
-            return
-        
-        await state.clear()
-        
-        # تحديث النصوص باللغة الجديدة
-        await callback.message.edit_text(
-            safe_get_text(user_id, "messages.language_changed"),
-            reply_markup=None,
-            parse_mode='Markdown'
-        )
-        
-        # إرسال القائمة الرئيسية باللغة الجديدة
-        await callback.message.answer(
-            safe_get_text(user_id, "messages.welcome_new"),
-            reply_markup=get_main_keyboard(new_lang),
-            parse_mode='Markdown'
-        )
-        
-        await callback.answer()
-        logger.info(f"User {user_id} changed language to {new_lang}")
-        
-    except Exception as e:
-        logger.error(f"Error in set_language: {e}")
-        await callback.answer("❌ حدث خطأ", show_alert=True)
-
-
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
-    """Handler for /help command"""
+    """Handler for /help command - عرض قائمة المساعدة"""
     try:
         user_id = message.from_user.id
         lang = db.get_user_language(user_id)
@@ -280,6 +224,7 @@ async def cmd_help(message: types.Message):
             "⭐ تقييم البوت - تقييم الخدمة\n"
             "🌍 تغيير اللغة - تغيير لغة البوت"
         )
+        
         help_text_en = (
             "📚 **Available Commands**\n\n"
             "/start - Start the bot\n"
@@ -295,11 +240,113 @@ async def cmd_help(message: types.Message):
         )
         
         help_text = help_text_ar if lang == 'ar' else help_text_en
-        await message.answer(help_text, parse_mode='Markdown', reply_markup=get_main_keyboard(lang))
+        
+        await message.answer(
+            help_text,
+            parse_mode='Markdown',
+            reply_markup=get_main_keyboard(lang)
+        )
         
     except Exception as e:
         logger.error(f"Error in cmd_help: {e}")
         await message.answer("❌ حدث خطأ", parse_mode='Markdown')
+
+
+@router.message(lambda m: m.text in ["🌍 تغيير اللغة", "🌍 Change Language"])
+async def change_language_button(message: types.Message):
+    """Handler for language change button - توجيه إلى واجهة تغيير اللغة"""
+    try:
+        user_id = message.from_user.id
+        
+        # التحقق من الحظر
+        if db.is_user_banned(user_id):
+            await message.answer(safe_get_text(user_id, "messages.banned"), parse_mode='Markdown')
+            return
+        
+        choose_lang_text = safe_get_text(user_id, "messages.choose_language")
+        
+        await message.answer(
+            choose_lang_text,
+            reply_markup=get_language_keyboard(),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Error in change_language_button: {e}")
+        await message.answer("❌ حدث خطأ", parse_mode='Markdown')
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith("lang_"))
+async def set_language(callback: types.CallbackQuery, state: FSMContext):
+    """Handler for setting user language from inline keyboard"""
+    try:
+        user_id = callback.from_user.id
+        
+        # التحقق من الحظر
+        if db.is_user_banned(user_id):
+            await callback.answer(safe_get_text(user_id, "messages.banned"), show_alert=True)
+            return
+        
+        # استخراج اللغة بشكل آمن
+        prefix, new_lang = safe_split_callback(callback.data)
+        
+        if not new_lang:
+            # محاولة استخراج بديلة
+            try:
+                parts = callback.data.split('_')
+                if len(parts) > 1:
+                    new_lang = parts[1]
+                else:
+                    await callback.answer("❌ بيانات غير صالحة", show_alert=True)
+                    return
+            except Exception:
+                await callback.answer("❌ بيانات غير صالحة", show_alert=True)
+                return
+        
+        # التحقق من أن اللغة مدعومة باستخدام SUPPORTED_LANGUAGES
+        if new_lang not in SUPPORTED_LANGUAGES:
+            logger.warning(f"Unsupported language {new_lang} requested by user {user_id}")
+            new_lang = 'ar'
+        
+        # تحديث اللغة في قاعدة البيانات
+        try:
+            db.set_user_language(user_id, new_lang)
+            db.update_last_active(user_id)
+        except Exception as e:
+            logger.error(f"Error setting language for user {user_id}: {e}")
+            await callback.answer("❌ فشل تغيير اللغة", show_alert=True)
+            return
+        
+        # مسح أي حالة FSM
+        await state.clear()
+        
+        # إرسال تأكيد تغيير اللغة
+        lang_changed_text = safe_get_text(user_id, "messages.language_changed")
+        
+        try:
+            await callback.message.edit_text(
+                lang_changed_text,
+                reply_markup=None,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Error editing message for user {user_id}: {e}")
+            await callback.message.answer(lang_changed_text, parse_mode='Markdown')
+        
+        # إرسال القائمة الرئيسية باللغة الجديدة
+        welcome_text = safe_get_text(user_id, "messages.welcome_new")
+        
+        await callback.message.answer(
+            welcome_text,
+            reply_markup=get_main_keyboard(new_lang),
+            parse_mode='Markdown'
+        )
+        
+        await callback.answer()
+        logger.info(f"User {user_id} changed language to {new_lang}")
+        
+    except Exception as e:
+        logger.error(f"Error in set_language: {e}")
+        await callback.answer("❌ حدث خطأ", show_alert=True)
 
 
 def register_start_handlers(dp):
