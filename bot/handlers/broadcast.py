@@ -1,17 +1,17 @@
 from aiogram import Router, F, types
-from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime
-import pytz
-import os
-import tempfile
-from bot.database import db
-from bot.keyboards.inline import get_broadcast_confirmation_keyboard, get_back_keyboard
+import logging
+import asyncio
+from bot.database.db import db
+from bot.keyboards.inline import get_broadcast_confirmation_keyboard
 from bot.keyboards.reply import get_admin_keyboard
-from bot.utils.translations import get_text
 from bot.config import ADMIN_ID, TIMEZONE
 from bot.states.broadcast_states import BroadcastStates
-import asyncio
+
+# إعداد logging
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -68,8 +68,9 @@ async def receive_broadcast_text(message: Message, state: FSMContext):
     
     await state.update_data(broadcast_type="text", broadcast_content=broadcast_text)
     
-    # عرض معاينة وتأكيد
-    users_count = len(db.get_all_users())
+    # الحصول على عدد المستخدمين
+    users = db.get_all_users()
+    users_count = len(users) if users else 0
     
     preview_text = (
         f"📢 **معاينة الإذاعة**\n\n"
@@ -117,7 +118,8 @@ async def receive_broadcast_photo(message: Message, state: FSMContext):
         broadcast_caption=caption
     )
     
-    users_count = len(db.get_all_users())
+    users = db.get_all_users()
+    users_count = len(users) if users else 0
     
     preview_text = (
         f"📢 **معاينة الإذاعة**\n\n"
@@ -177,7 +179,8 @@ async def receive_broadcast_video(message: Message, state: FSMContext):
         broadcast_caption=caption
     )
     
-    users_count = len(db.get_all_users())
+    users = db.get_all_users()
+    users_count = len(users) if users else 0
     
     preview_text = (
         f"📢 **معاينة الإذاعة**\n\n"
@@ -219,6 +222,12 @@ async def confirm_broadcast(callback: CallbackQuery, state: FSMContext):
     
     # الحصول على جميع المستخدمين
     users = db.get_all_users()
+    if not users:
+        await callback.message.edit_text("❌ **لا يوجد مستخدمين لإرسال الإذاعة لهم**", parse_mode='Markdown')
+        await state.clear()
+        await callback.answer()
+        return
+    
     total_users = len(users)
     success_count = 0
     failed_count = 0
@@ -231,10 +240,20 @@ async def confirm_broadcast(callback: CallbackQuery, state: FSMContext):
         parse_mode='Markdown'
     )
     
+    logger.info(f"بدء إذاعة {broadcast_type} لـ {total_users} مستخدم")
+    
     # إرسال الإذاعة لكل مستخدم
     for i, user in enumerate(users):
         try:
-            user_id = user['user_id']
+            # التوافق مع dict أو tuple
+            if isinstance(user, dict):
+                user_id = user.get('user_id')
+            else:
+                user_id = user[0] if len(user) > 0 else None
+            
+            if not user_id:
+                failed_count += 1
+                continue
             
             if broadcast_type == "text":
                 broadcast_text = data.get('broadcast_content')
@@ -276,21 +295,25 @@ async def confirm_broadcast(callback: CallbackQuery, state: FSMContext):
                     parse_mode='Markdown'
                 )
             
-            # تجنب الحظر من Telegrams
-            await asyncio.sleep(0.05)
+            # تجنب الحظر من Telegram (زيادة الوقت إلى 0.1 ثانية)
+            await asyncio.sleep(0.1)
             
         except Exception as e:
             failed_count += 1
-            print(f"Failed to send to {user['user_id']}: {e}")
+            logger.error(f"فشل إرسال الإذاعة للمستخدم {user_id if 'user_id' in locals() else 'unknown'}: {e}")
     
     # تسجيل الإذاعة في سجل الأدمن
-    db.log_admin_action(
-        ADMIN_ID, 
-        'broadcast', 
-        None, 
-        None, 
-        f'type: {broadcast_type}, sent: {success_count}, failed: {failed_count}'
-    )
+    try:
+        db.log_admin_action(
+            callback.from_user.id, 
+            'broadcast', 
+            None, 
+            None, 
+            f'type: {broadcast_type}, sent: {success_count}, failed: {failed_count}'
+        )
+        logger.info(f"تم تسجيل الإذاعة في السجلات: {success_count} نجاح، {failed_count} فشل")
+    except Exception as e:
+        logger.error(f"فشل تسجيل الإذاعة: {e}")
     
     # إرسال التقرير النهائي
     result_text = (
@@ -305,7 +328,7 @@ async def confirm_broadcast(callback: CallbackQuery, state: FSMContext):
     await status_msg.edit_text(result_text, parse_mode='Markdown')
     await callback.message.answer(
         "👑 **لوحة التحكم**",
-        reply_markup=get_admin_keyboard()
+        reply_markup=get_admin_keyboard(callback.from_user.id)  # تمرير user_id
     )
     
     await state.clear()
@@ -326,7 +349,7 @@ async def cancel_broadcast(callback: CallbackQuery, state: FSMContext):
     )
     await callback.message.answer(
         "👑 **لوحة التحكم**",
-        reply_markup=get_admin_keyboard()
+        reply_markup=get_admin_keyboard(callback.from_user.id)  # تمرير user_id
     )
     await state.clear()
     await callback.answer()
@@ -345,7 +368,7 @@ async def broadcast_cancel(callback: CallbackQuery, state: FSMContext):
     )
     await callback.message.answer(
         "👑 **لوحة التحكم**",
-        reply_markup=get_admin_keyboard()
+        reply_markup=get_admin_keyboard(callback.from_user.id)  # تمرير user_id
     )
     await state.clear()
     await callback.answer()
@@ -354,3 +377,4 @@ async def broadcast_cancel(callback: CallbackQuery, state: FSMContext):
 def register_broadcast_handlers(dp):
     """تسجيل معالجات الإذاعة"""
     dp.include_router(router)
+    logger.info("تم تسجيل معالجات الإذاعة بنجاح")
