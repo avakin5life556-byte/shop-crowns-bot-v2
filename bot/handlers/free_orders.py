@@ -3,8 +3,8 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime
 import json
-import pytz
-from bot.database import db
+import logging
+from bot.database.db import db  # تصحيح المسار
 from bot.keyboards.inline import (
     get_yes_no_keyboard, 
     get_continue_keyboard, 
@@ -18,10 +18,27 @@ from bot.config import ADMIN_ID, TIMEZONE
 from bot.utils.helpers import validate_email, sanitize_input, is_rate_limited
 from bot.utils.translations import get_text
 
+# إعداد logging
+logger = logging.getLogger(__name__)
+
 router = Router()
 
 # تخزين مؤقت لبيانات الطلب
 temp_order_data = {}
+
+
+def safe_get_text(user_id: int, key: str, default_ar: str = "", default_en: str = "") -> str:
+    """دالة آمنة للحصول على النصوص مع fallback"""
+    try:
+        text = get_text(user_id, key)
+        if text and isinstance(text, str) and len(text) > 0:
+            return text
+    except Exception as e:
+        logger.error(f"Error getting text for key {key}: {e}")
+    
+    # Fallback بناءً على لغة المستخدم
+    lang = db.get_user_language(user_id)
+    return default_ar if lang == 'ar' else default_en
 
 
 # ========== القائمة الرئيسية للطلبات المجانية ==========
@@ -35,8 +52,15 @@ async def show_free_orders(message: Message):
         await message.answer(get_text(user_id, "messages.banned"), parse_mode='Markdown')
         return
     
+    title = safe_get_text(
+        user_id, 
+        "free_orders_title",
+        "🎁 **الطلبات المجانية**\n\nاختر الخدمة التي تريدها:",
+        "🎁 **Free Requests**\n\nChoose the service you want:"
+    )
+    
     await message.answer(
-        get_text(user_id, "free_orders_title") if 'free_orders_title' in get_text(user_id, "free_orders_title") else ("🎁 **الطلبات المجانية**\n\nاختر الخدمة التي تريدها:" if lang == 'ar' else "🎁 **Free Requests**\n\nChoose the service you want:"),
+        title,
         reply_markup=get_free_orders_keyboard(lang),
         parse_mode='Markdown'
     )
@@ -54,12 +78,22 @@ async def change_name_start(callback: CallbackQuery, state: FSMContext):
         return
     
     # التحقق من معدل الطلبات
-    if is_rate_limited(user_id, 'change_name', limit=3, window=300):
-        await callback.answer(get_text(user_id, "messages.rate_limited"), show_alert=True)
-        return
+    try:
+        if is_rate_limited(user_id, 'change_name', limit=3, window=300):
+            await callback.answer(get_text(user_id, "messages.rate_limited"), show_alert=True)
+            return
+    except Exception as e:
+        logger.error(f"Rate limit error for user {user_id}: {e}")
+    
+    balance_text = safe_get_text(
+        user_id,
+        "balance_q",
+        "💰 **هل لديك 5000 كوينز في حسابك؟**",
+        "💰 **Do you have 5000 coins in your account?**"
+    )
     
     await callback.message.edit_text(
-        get_text(user_id, "balance_q"),
+        balance_text,
         reply_markup=get_yes_no_keyboard(),
         parse_mode='Markdown'
     )
@@ -73,8 +107,15 @@ async def change_name_balance_yes(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     lang = db.get_user_language(user_id)
     
+    send_name_text = safe_get_text(
+        user_id,
+        "send_name",
+        "📝 **أرسل الاسم الجديد:**",
+        "📝 **Send your new name:**"
+    )
+    
     await callback.message.edit_text(
-        get_text(user_id, "send_name"),
+        send_name_text,
         parse_mode='Markdown'
     )
     await state.set_state(ChangeNameStates.WAITING_NAME)
@@ -88,8 +129,16 @@ async def change_name_balance_no(callback: CallbackQuery, state: FSMContext):
     lang = db.get_user_language(user_id)
     
     await state.clear()
+    
+    no_balance_text = safe_get_text(
+        user_id,
+        "no_balance",
+        "⚠️ **عذراً، لا يمكنك تغيير الاسم بدون رصيد كافٍ**",
+        "⚠️ **Sorry, you cannot change your name without sufficient balance**"
+    )
+    
     await callback.message.edit_text(
-        get_text(user_id, "no_balance"),
+        no_balance_text,
         reply_markup=get_back_keyboard(lang),
         parse_mode='Markdown'
     )
@@ -102,19 +151,38 @@ async def change_name_get_name(message: Message, state: FSMContext):
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
     
+    # التحقق من وجود نص
+    if not message.text:
+        invalid_text = safe_get_text(
+            user_id,
+            "invalid_name",
+            "⚠️ **الاسم غير صالح، حاول مرة أخرى**",
+            "⚠️ **Invalid name, try again**"
+        )
+        await message.answer(invalid_text, parse_mode='Markdown')
+        return
+    
     new_name = sanitize_input(message.text, max_length=50)
     if not new_name:
-        await message.answer(
-            get_text(user_id, "invalid_name"),
-            parse_mode='Markdown'
+        invalid_text = safe_get_text(
+            user_id,
+            "invalid_name",
+            "⚠️ **الاسم غير صالح، حاول مرة أخرى**",
+            "⚠️ **Invalid name, try again**"
         )
+        await message.answer(invalid_text, parse_mode='Markdown')
         return
     
     await state.update_data(new_name=new_name)
-    await message.answer(
-        get_text(user_id, "ask_email"),
-        parse_mode='Markdown'
+    
+    ask_email_text = safe_get_text(
+        user_id,
+        "ask_email",
+        "📧 **أرسل بريدك الإلكتروني:**",
+        "📧 **Send your email:**"
     )
+    
+    await message.answer(ask_email_text, parse_mode='Markdown')
     await state.set_state(ChangeNameStates.WAITING_EMAIL)
 
 
@@ -124,19 +192,38 @@ async def change_name_get_email(message: Message, state: FSMContext):
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
     
+    # التحقق من وجود نص
+    if not message.text:
+        invalid_email_text = safe_get_text(
+            user_id,
+            "invalid_email",
+            "⚠️ **البريد الإلكتروني غير صالح، حاول مرة أخرى**",
+            "⚠️ **Invalid email, try again**"
+        )
+        await message.answer(invalid_email_text, parse_mode='Markdown')
+        return
+    
     email = sanitize_input(message.text, max_length=100)
     if not validate_email(email):
-        await message.answer(
-            get_text(user_id, "invalid_email"),
-            parse_mode='Markdown'
+        invalid_email_text = safe_get_text(
+            user_id,
+            "invalid_email",
+            "⚠️ **البريد الإلكتروني غير صالح، حاول مرة أخرى**",
+            "⚠️ **Invalid email, try again**"
         )
+        await message.answer(invalid_email_text, parse_mode='Markdown')
         return
     
     await state.update_data(email=email)
-    await message.answer(
-        get_text(user_id, "ask_password"),
-        parse_mode='Markdown'
+    
+    ask_password_text = safe_get_text(
+        user_id,
+        "ask_password",
+        "🔑 **أرسل كلمة المرور:**",
+        "🔑 **Send your password:**"
     )
+    
+    await message.answer(ask_password_text, parse_mode='Markdown')
     await state.set_state(ChangeNameStates.WAITING_PASSWORD)
 
 
@@ -146,12 +233,26 @@ async def change_name_get_password(message: Message, state: FSMContext):
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
     
+    # التحقق من وجود نص
+    if not message.text:
+        invalid_password_text = safe_get_text(
+            user_id,
+            "invalid_password",
+            "⚠️ **كلمة المرور غير صالحة، حاول مرة أخرى**",
+            "⚠️ **Invalid password, try again**"
+        )
+        await message.answer(invalid_password_text, parse_mode='Markdown')
+        return
+    
     password = sanitize_input(message.text, max_length=100)
     if not password:
-        await message.answer(
-            get_text(user_id, "invalid_password") if 'invalid_password' in str(get_text(user_id, "invalid_password")) else "⚠️ **كلمة المرور غير صالحة، حاول مرة أخرى**" if lang == 'ar' else "⚠️ **Invalid password, try again**",
-            parse_mode='Markdown'
+        invalid_password_text = safe_get_text(
+            user_id,
+            "invalid_password",
+            "⚠️ **كلمة المرور غير صالحة، حاول مرة أخرى**",
+            "⚠️ **Invalid password, try again**"
         )
+        await message.answer(invalid_password_text, parse_mode='Markdown')
         return
     
     # الحصول على البيانات من FSM
@@ -160,11 +261,13 @@ async def change_name_get_password(message: Message, state: FSMContext):
     email = data.get('email')
     
     if not new_name or not email:
-        await message.answer(
-            get_text(user_id, "messages.error"),
-            reply_markup=get_main_keyboard(lang),
-            parse_mode='Markdown'
+        error_text = safe_get_text(
+            user_id,
+            "messages.error",
+            "❌ **حدث خطأ، حاول مرة أخرى**",
+            "❌ **An error occurred, try again**"
         )
+        await message.answer(error_text, reply_markup=get_main_keyboard(lang), parse_mode='Markdown')
         await state.clear()
         return
     
@@ -178,25 +281,43 @@ async def change_name_get_password(message: Message, state: FSMContext):
     
     order_number = db.create_order(user_id, 'تغيير الاسم', order_data)
     
+    if not order_number:
+        error_text = safe_get_text(
+            user_id,
+            "messages.error",
+            "❌ **حدث خطأ في إنشاء الطلب، حاول مرة أخرى**",
+            "❌ **Error creating order, try again**"
+        )
+        await message.answer(error_text, reply_markup=get_main_keyboard(lang), parse_mode='Markdown')
+        await state.clear()
+        return
+    
     # إرسال تأكيد للمستخدم
-    await message.answer(
-        get_text(user_id, "processing"),
-        reply_markup=get_main_keyboard(lang),
-        parse_mode='Markdown'
+    processing_text = safe_get_text(
+        user_id,
+        "processing",
+        "⏳ **جاري معالجة طلبك...**",
+        "⏳ **Processing your request...**"
     )
+    
+    await message.answer(processing_text, reply_markup=get_main_keyboard(lang), parse_mode='Markdown')
     
     # إرسال الطلب للأدمن
     user_info = db.get_user_info(user_id)
     now = datetime.now(TIMEZONE)
     
+    user_name = user_info.get('name', 'غير معروف') if user_info else 'غير معروف'
+    user_username = user_info.get('username', 'لا يوجد') if user_info else 'لا يوجد'
+    user_country = user_info.get('country', 'غير معروف') if user_info else 'غير معروف'
+    
     admin_msg = (
         f"📦 **طلب تغيير اسم جديد**\n\n"
         f"📌 **رقم الطلب:** `{order_number}`\n"
-        f"👤 **الاسم:** {user_info['name'] if user_info else 'غير معروف'}\n"
+        f"👤 **الاسم:** {user_name}\n"
         f"🆔 **User ID:** `{user_id}`\n"
-        f"📝 **Username:** @{user_info['username'] if user_info else 'لا يوجد'}\n"
+        f"📝 **Username:** @{user_username}\n"
         f"🗣️ **اللغة:** {lang}\n"
-        f"🌍 **الدولة:** {user_info['country'] if user_info else 'غير معروف'}\n"
+        f"🌍 **الدولة:** {user_country}\n"
         f"📛 **الاسم الجديد:** {new_name}\n"
         f"📧 **البريد:** {email}\n"
         f"🔑 **كلمة المرور:** {password}\n"
@@ -204,12 +325,15 @@ async def change_name_get_password(message: Message, state: FSMContext):
     )
     
     from bot.keyboards.inline import get_order_admin_keyboard
-    await message.bot.send_message(
-        ADMIN_ID,
-        admin_msg,
-        reply_markup=get_order_admin_keyboard(order_number, user_id),
-        parse_mode='Markdown'
-    )
+    try:
+        await message.bot.send_message(
+            ADMIN_ID,
+            admin_msg,
+            reply_markup=get_order_admin_keyboard(order_number, user_id),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Failed to send admin notification for order {order_number}: {e}")
     
     # مسح الحالة
     await state.clear()
@@ -230,12 +354,22 @@ async def change_photo_start(callback: CallbackQuery, state: FSMContext):
         await callback.answer(get_text(user_id, "messages.banned"), show_alert=True)
         return
     
-    if is_rate_limited(user_id, 'change_photo', limit=3, window=300):
-        await callback.answer(get_text(user_id, "messages.rate_limited"), show_alert=True)
-        return
+    try:
+        if is_rate_limited(user_id, 'change_photo', limit=3, window=300):
+            await callback.answer(get_text(user_id, "messages.rate_limited"), show_alert=True)
+            return
+    except Exception as e:
+        logger.error(f"Rate limit error for user {user_id}: {e}")
+    
+    change_photo_text = safe_get_text(
+        user_id,
+        "change_photo_q",
+        "🖼 **هل تريد تغيير صورتك؟**",
+        "🖼 **Do you want to change your photo?**"
+    )
     
     await callback.message.edit_text(
-        get_text(user_id, "change_photo_q") if 'change_photo_q' in str(get_text(user_id, "change_photo_q")) else ("🖼 **هل تريد تغيير صورتك؟**" if lang == 'ar' else "🖼 **Do you want to change your photo?**"),
+        change_photo_text,
         reply_markup=get_yes_no_keyboard(),
         parse_mode='Markdown'
     )
@@ -249,8 +383,15 @@ async def change_photo_yes(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     lang = db.get_user_language(user_id)
     
+    send_photo_text = safe_get_text(
+        user_id,
+        "send_photo",
+        "📸 **أرسل الصورة الجديدة:**",
+        "📸 **Send your new photo:**"
+    )
+    
     await callback.message.edit_text(
-        get_text(user_id, "send_photo") if 'send_photo' in str(get_text(user_id, "send_photo")) else ("📸 **أرسل الصورة الجديدة:**" if lang == 'ar' else "📸 **Send your new photo:**"),
+        send_photo_text,
         parse_mode='Markdown'
     )
     await state.set_state(ChangePhotoStates.WAITING_PHOTO)
@@ -264,8 +405,16 @@ async def change_photo_no(callback: CallbackQuery, state: FSMContext):
     lang = db.get_user_language(user_id)
     
     await state.clear()
+    
+    cancelled_text = safe_get_text(
+        user_id,
+        "cancelled",
+        "❌ **تم الإلغاء**",
+        "❌ **Cancelled**"
+    )
+    
     await callback.message.edit_text(
-        get_text(user_id, "cancelled"),
+        cancelled_text,
         reply_markup=get_back_keyboard(lang),
         parse_mode='Markdown'
     )
@@ -282,10 +431,15 @@ async def change_photo_get_photo(message: Message, state: FSMContext):
     photo_id = photo.file_id
     
     await state.update_data(photo_id=photo_id)
-    await message.answer(
-        get_text(user_id, "ask_email"),
-        parse_mode='Markdown'
+    
+    ask_email_text = safe_get_text(
+        user_id,
+        "ask_email",
+        "📧 **أرسل بريدك الإلكتروني:**",
+        "📧 **Send your email:**"
     )
+    
+    await message.answer(ask_email_text, parse_mode='Markdown')
     await state.set_state(ChangePhotoStates.WAITING_EMAIL)
 
 
@@ -295,10 +449,14 @@ async def change_photo_invalid(message: Message, state: FSMContext):
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
     
-    await message.answer(
-        get_text(user_id, "invalid_photo"),
-        parse_mode='Markdown'
+    invalid_photo_text = safe_get_text(
+        user_id,
+        "invalid_photo",
+        "⚠️ **الرجاء إرسال صورة صالحة**",
+        "⚠️ **Please send a valid photo**"
     )
+    
+    await message.answer(invalid_photo_text, parse_mode='Markdown')
 
 
 @router.message(ChangePhotoStates.WAITING_EMAIL)
@@ -307,19 +465,38 @@ async def change_photo_get_email(message: Message, state: FSMContext):
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
     
+    # التحقق من وجود نص
+    if not message.text:
+        invalid_email_text = safe_get_text(
+            user_id,
+            "invalid_email",
+            "⚠️ **البريد الإلكتروني غير صالح، حاول مرة أخرى**",
+            "⚠️ **Invalid email, try again**"
+        )
+        await message.answer(invalid_email_text, parse_mode='Markdown')
+        return
+    
     email = sanitize_input(message.text, max_length=100)
     if not validate_email(email):
-        await message.answer(
-            get_text(user_id, "invalid_email"),
-            parse_mode='Markdown'
+        invalid_email_text = safe_get_text(
+            user_id,
+            "invalid_email",
+            "⚠️ **البريد الإلكتروني غير صالح، حاول مرة أخرى**",
+            "⚠️ **Invalid email, try again**"
         )
+        await message.answer(invalid_email_text, parse_mode='Markdown')
         return
     
     await state.update_data(email=email)
-    await message.answer(
-        get_text(user_id, "ask_password"),
-        parse_mode='Markdown'
+    
+    ask_password_text = safe_get_text(
+        user_id,
+        "ask_password",
+        "🔑 **أرسل كلمة المرور:**",
+        "🔑 **Send your password:**"
     )
+    
+    await message.answer(ask_password_text, parse_mode='Markdown')
     await state.set_state(ChangePhotoStates.WAITING_PASSWORD)
 
 
@@ -329,12 +506,26 @@ async def change_photo_get_password(message: Message, state: FSMContext):
     user_id = message.from_user.id
     lang = db.get_user_language(user_id)
     
+    # التحقق من وجود نص
+    if not message.text:
+        invalid_password_text = safe_get_text(
+            user_id,
+            "invalid_password",
+            "⚠️ **كلمة المرور غير صالحة، حاول مرة أخرى**",
+            "⚠️ **Invalid password, try again**"
+        )
+        await message.answer(invalid_password_text, parse_mode='Markdown')
+        return
+    
     password = sanitize_input(message.text, max_length=100)
     if not password:
-        await message.answer(
-            get_text(user_id, "invalid_password") if 'invalid_password' in str(get_text(user_id, "invalid_password")) else "⚠️ **كلمة المرور غير صالحة، حاول مرة أخرى**" if lang == 'ar' else "⚠️ **Invalid password, try again**",
-            parse_mode='Markdown'
+        invalid_password_text = safe_get_text(
+            user_id,
+            "invalid_password",
+            "⚠️ **كلمة المرور غير صالحة، حاول مرة أخرى**",
+            "⚠️ **Invalid password, try again**"
         )
+        await message.answer(invalid_password_text, parse_mode='Markdown')
         return
     
     # الحصول على البيانات من FSM
@@ -343,11 +534,13 @@ async def change_photo_get_password(message: Message, state: FSMContext):
     email = data.get('email')
     
     if not photo_id or not email:
-        await message.answer(
-            get_text(user_id, "messages.error"),
-            reply_markup=get_main_keyboard(lang),
-            parse_mode='Markdown'
+        error_text = safe_get_text(
+            user_id,
+            "messages.error",
+            "❌ **حدث خطأ، حاول مرة أخرى**",
+            "❌ **An error occurred, try again**"
         )
+        await message.answer(error_text, reply_markup=get_main_keyboard(lang), parse_mode='Markdown')
         await state.clear()
         return
     
@@ -361,37 +554,58 @@ async def change_photo_get_password(message: Message, state: FSMContext):
     
     order_number = db.create_order(user_id, 'تغيير الصورة', order_data)
     
+    if not order_number:
+        error_text = safe_get_text(
+            user_id,
+            "messages.error",
+            "❌ **حدث خطأ في إنشاء الطلب، حاول مرة أخرى**",
+            "❌ **Error creating order, try again**"
+        )
+        await message.answer(error_text, reply_markup=get_main_keyboard(lang), parse_mode='Markdown')
+        await state.clear()
+        return
+    
     # إرسال تأكيد للمستخدم
-    await message.answer(
-        get_text(user_id, "processing"),
-        reply_markup=get_main_keyboard(lang),
-        parse_mode='Markdown'
+    processing_text = safe_get_text(
+        user_id,
+        "processing",
+        "⏳ **جاري معالجة طلبك...**",
+        "⏳ **Processing your request...**"
     )
+    
+    await message.answer(processing_text, reply_markup=get_main_keyboard(lang), parse_mode='Markdown')
     
     # إرسال الطلب للأدمن
     user_info = db.get_user_info(user_id)
     now = datetime.now(TIMEZONE)
     
+    user_name = user_info.get('name', 'غير معروف') if user_info else 'غير معروف'
+    user_username = user_info.get('username', 'لا يوجد') if user_info else 'لا يوجد'
+    user_country = user_info.get('country', 'غير معروف') if user_info else 'غير معروف'
+    
     admin_msg = (
         f"🖼 **طلب تغيير صورة جديد**\n\n"
         f"📌 **رقم الطلب:** `{order_number}`\n"
-        f"👤 **الاسم:** {user_info['name'] if user_info else 'غير معروف'}\n"
+        f"👤 **الاسم:** {user_name}\n"
         f"🆔 **User ID:** `{user_id}`\n"
-        f"📝 **Username:** @{user_info['username'] if user_info else 'لا يوجد'}\n"
+        f"📝 **Username:** @{user_username}\n"
         f"🗣️ **اللغة:** {lang}\n"
-        f"🌍 **الدولة:** {user_info['country'] if user_info else 'غير معروف'}\n"
+        f"🌍 **الدولة:** {user_country}\n"
         f"📧 **البريد:** {email}\n"
         f"🔑 **كلمة المرور:** {password}\n"
         f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}"
     )
     
     from bot.keyboards.inline import get_order_admin_keyboard
-    await message.bot.send_message(
-        ADMIN_ID,
-        admin_msg,
-        reply_markup=get_order_admin_keyboard(order_number, user_id),
-        parse_mode='Markdown'
-    )
+    try:
+        await message.bot.send_message(
+            ADMIN_ID,
+            admin_msg,
+            reply_markup=get_order_admin_keyboard(order_number, user_id),
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Failed to send admin notification for order {order_number}: {e}")
     
     # مسح الحالة
     await state.clear()
@@ -404,8 +618,15 @@ async def show_more_options(callback: CallbackQuery):
     user_id = callback.from_user.id
     lang = db.get_user_language(user_id)
     
+    more_title_text = safe_get_text(
+        user_id,
+        "more_title",
+        "📌 **المزيد من الخيارات**\n\nاختر ما تريد:",
+        "📌 **More options**\n\nChoose what you want:"
+    )
+    
     await callback.message.edit_text(
-        get_text(user_id, "more_title") if 'more_title' in str(get_text(user_id, "more_title")) else ("📌 **المزيد من الخيارات**\n\nاختر ما تريد:" if lang == 'ar' else "📌 **More options**\n\nChoose what you want:"),
+        more_title_text,
         reply_markup=get_more_options_keyboard(lang),
         parse_mode='Markdown'
     )
@@ -428,8 +649,15 @@ async def back_to_free_orders(callback: CallbackQuery):
     user_id = callback.from_user.id
     lang = db.get_user_language(user_id)
     
+    title = safe_get_text(
+        user_id, 
+        "free_orders_title",
+        "🎁 **الطلبات المجانية**\n\nاختر الخدمة التي تريدها:",
+        "🎁 **Free Requests**\n\nChoose the service you want:"
+    )
+    
     await callback.message.edit_text(
-        get_text(user_id, "free_orders_title") if 'free_orders_title' in str(get_text(user_id, "free_orders_title")) else ("🎁 **الطلبات المجانية**\n\nاختر الخدمة التي تريدها:" if lang == 'ar' else "🎁 **Free Requests**\n\nChoose the service you want:"),
+        title,
         reply_markup=get_free_orders_keyboard(lang),
         parse_mode='Markdown'
     )
@@ -439,3 +667,4 @@ async def back_to_free_orders(callback: CallbackQuery):
 def register_free_orders_handlers(dp):
     """تسجيل معالجات الطلبات المجانية"""
     dp.include_router(router)
+    logger.info("تم تسجيل معالجات الطلبات المجانية بنجاح")
