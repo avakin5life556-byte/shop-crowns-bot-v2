@@ -337,14 +337,15 @@ async def open_live_chat(callback: CallbackQuery, state: FSMContext):
     now = datetime.now(TIMEZONE)
     
     user_name = user_info.get('name', 'غير معروف') if user_info else 'غير معروف'
-    user_username = user_info.get('username', 'لا يوجد') if user_info else 'لا يوجد'
+    user_username = user_info.get('username') if user_info else None
+    username_display = f"@{user_username}" if user_username else "لا يوجد"
     
     admin_msg = (
         f"💬 **محادثة مباشرة جديدة**\n\n"
         f"🎫 **رقم التذكرة:** `{ticket_number}`\n"
         f"👤 **الاسم:** {user_name}\n"
         f"🆔 **User ID:** `{user_id}`\n"
-        f"📝 **Username:** @{user_username}\n"
+        f"📝 **Username:** {username_display}\n"
         f"🗣️ **اللغة:** {lang}\n"
         f"📅 **التاريخ:** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         f"المستخدم ينتظر الرد..."
