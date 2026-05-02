@@ -25,7 +25,7 @@ class SessionManager:
         self._lock = asyncio.Lock()
         self._cleanup_task: Optional[asyncio.Task] = None
         
-    def create_session(self, user_id: int, data: dict = None) -> None:
+    async def create_session(self, user_id: int, data: dict = None) -> None:
         """
         إنشاء جلسة جديدة لمستخدم
         
@@ -36,7 +36,7 @@ class SessionManager:
         try:
             now = time.time()
             
-            with self._lock:
+            async with self._lock:
                 self.sessions[user_id] = data.copy() if data else {}
                 self.last_activity[user_id] = now
                 
@@ -45,7 +45,7 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Failed to create session for user {user_id}: {e}")
     
-    def get_session(self, user_id: int) -> Dict[str, Any]:
+    async def get_session(self, user_id: int) -> Dict[str, Any]:
         """
         الحصول على بيانات الجلسة لمستخدم
         
@@ -61,8 +61,8 @@ class SessionManager:
                 return {}
             
             # التحقق من صلاحية الجلسة
-            if not self._is_session_valid(user_id):
-                self.delete_session(user_id)
+            if not await self._is_session_valid(user_id):
+                await self.delete_session(user_id)
                 return {}
             
             # تحديث وقت آخر نشاط
@@ -75,7 +75,7 @@ class SessionManager:
             logger.error(f"Failed to get session for user {user_id}: {e}")
             return {}
     
-    def update_session(self, user_id: int, data: dict) -> None:
+    async def update_session(self, user_id: int, data: dict) -> None:
         """
         تحديث بيانات الجلسة لمستخدم
         
@@ -89,17 +89,17 @@ class SessionManager:
             
             # التحقق من وجود الجلسة
             if user_id not in self.sessions:
-                self.create_session(user_id, data)
+                await self.create_session(user_id, data)
                 return
             
             # التحقق من صلاحية الجلسة
-            if not self._is_session_valid(user_id):
-                self.delete_session(user_id)
-                self.create_session(user_id, data)
+            if not await self._is_session_valid(user_id):
+                await self.delete_session(user_id)
+                await self.create_session(user_id, data)
                 return
             
             # تحديث البيانات مع قفل
-            with self._lock:
+            async with self._lock:
                 if user_id in self.sessions:
                     self.sessions[user_id].update(data.copy())
                     self.last_activity[user_id] = time.time()
@@ -109,7 +109,7 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Failed to update session for user {user_id}: {e}")
     
-    def delete_session(self, user_id: int) -> bool:
+    async def delete_session(self, user_id: int) -> bool:
         """
         حذف جلسة مستخدم
         
@@ -120,7 +120,7 @@ class SessionManager:
             True إذا تم الحذف، False إذا لم تكن موجودة
         """
         try:
-            with self._lock:
+            async with self._lock:
                 if user_id in self.sessions:
                     del self.sessions[user_id]
                     self.last_activity.pop(user_id, None)
@@ -133,7 +133,7 @@ class SessionManager:
             logger.error(f"Failed to delete session for user {user_id}: {e}")
             return False
     
-    def _is_session_valid(self, user_id: int) -> bool:
+    async def _is_session_valid(self, user_id: int) -> bool:
         """
         التحقق من صلاحية الجلسة
         
@@ -156,7 +156,7 @@ class SessionManager:
             logger.error(f"Failed to check session validity for user {user_id}: {e}")
             return False
     
-    def _cleanup_expired_sessions(self) -> int:
+    async def _cleanup_expired_sessions(self) -> int:
         """
         تنظيف الجلسات المنتهية صلاحيتها
         
@@ -173,7 +173,7 @@ class SessionManager:
                     expired_users.append(user_id)
             
             # حذف الجلسات المنتهية
-            with self._lock:
+            async with self._lock:
                 for user_id in expired_users:
                     self.sessions.pop(user_id, None)
                     self.last_activity.pop(user_id, None)
@@ -210,7 +210,7 @@ class SessionManager:
             return int(time.time() - self.last_activity[user_id])
         return None
     
-    def extend_session(self, user_id: int, extra_time: int = 300) -> bool:
+    async def extend_session(self, user_id: int, extra_time: int = 300) -> bool:
         """
         تمديد صلاحية الجلسة بمدة إضافية
         
@@ -252,7 +252,7 @@ class SessionManager:
         while True:
             try:
                 await asyncio.sleep(60)  # تنظيف كل دقيقة
-                self._cleanup_expired_sessions()
+                await self._cleanup_expired_sessions()
                 
             except asyncio.CancelledError:
                 logger.info("Session cleanup task cancelled")
@@ -273,7 +273,7 @@ class SessionManager:
                 pass
             logger.info("Session cleanup task stopped")
     
-    def clear_all_sessions(self) -> int:
+    async def clear_all_sessions(self) -> int:
         """
         مسح جميع الجلسات (للصيانة)
         
@@ -281,7 +281,7 @@ class SessionManager:
             عدد الجلسات التي تم مسحها
         """
         try:
-            with self._lock:
+            async with self._lock:
                 count = len(self.sessions)
                 self.sessions.clear()
                 self.last_activity.clear()
