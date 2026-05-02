@@ -1,4 +1,4 @@
-print("🔥 BOT IS RUNNING NOW")
+# print("🔥 BOT IS RUNNING NOW")
 import asyncio
 import logging
 import sys
@@ -76,7 +76,8 @@ def create_background_task(coro) -> asyncio.Task:
     """إنشاء مهمة خلفية وتتبعها للإغلاق الآمن"""
     task = asyncio.create_task(coro)
     _background_tasks.append(task)
-    task.add_done_callback(_background_tasks.remove)
+    # إصلاح: استخدام lambda مع المرجع لتجنب أخطاء الحذف
+    task.add_done_callback(lambda t: _background_tasks.remove(t) if t in _background_tasks else None)
     return task
 
 
@@ -113,7 +114,7 @@ async def on_startup():
             "🔒 **الأمان مفعل**\n"
             "⏰ **المهلات تعمل**\n"
             "🚀 جاهز للاستخدام",
-            parse_mode='Markdown'
+            parse_mode="Markdown"
         )
         logger.info("✅ Admin notification sent")
         
